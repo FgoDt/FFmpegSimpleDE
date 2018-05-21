@@ -7,6 +7,6 @@ include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64
 link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
 
 # 将源添加到此项目的可执行文件。
-add_library (savde "savde.c")
+add_library (saved "saved.c")
 
 # TODO: 如有需要，请添加测试并安装目标。
