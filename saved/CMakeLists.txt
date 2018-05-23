@@ -3,10 +3,12 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\include")
-link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
+
 
 # 将源添加到此项目的可执行文件。
-add_library (saved "saved.c")
+add_library (saved "saved.c"
+                    log.c
+)
+
 
 # TODO: 如有需要，请添加测试并安装目标。

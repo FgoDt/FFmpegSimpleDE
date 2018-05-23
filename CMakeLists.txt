@@ -3,10 +3,14 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\include")
+link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
+
 project ("test")
 
 # 包含子项目。
 add_subdirectory ("saved")
+
 
 add_executable(test test.c)
 
@@ -14,4 +18,5 @@ target_link_libraries(
     test
     saved
     
+    avutil
 )
