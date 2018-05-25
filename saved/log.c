@@ -12,7 +12,7 @@
 static int saved_log_level;
 void saved_log(void *ctx, int level, const char *fmt, ...) {
 
-    if (level < saved_log_level)
+    if (level > saved_log_level)
     {
         return;
     }
