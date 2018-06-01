@@ -18,5 +18,6 @@ target_link_libraries(
     test
     saved
     
+    avformat
     avutil
 )

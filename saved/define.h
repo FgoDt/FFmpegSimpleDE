@@ -24,7 +24,9 @@
 #define RETIFNULL(x) if((x) == NULL) return
 
 #define SAVED_E_
+#define SAVED_OP_OK 0
 #define SAVED_E_AVLIB_ERROR -1
 #define SAVED_E_NO_MEM  -2
+#define SAVED_E_NO_MEDIAFILE -3
 #define SAVED_E_USE_NULL -255
 #define SAVED_E_UNDEFINE -0xffff

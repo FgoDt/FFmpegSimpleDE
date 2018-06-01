@@ -11,6 +11,8 @@ SAVEDFormat* saved_format_alloc() {
         return fmt;
     }
     fmt->fmt = NULL;
+    fmt->best_audio_index = -1;
+    fmt->best_video_index = -1;
     return fmt;
 }
 
@@ -35,11 +37,36 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
         return SAVED_E_AVLIB_ERROR;
     }
 
-    
+    ctx->best_audio_index =  av_find_best_stream(ctx->fmt, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+    ctx->best_video_index = av_find_best_stream(ctx->fmt, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 
-    return SAVED_E_UNDEFINE;
+    if (ctx->best_audio_index <0)
+    {
+        SAVLOGW("no audio in media");
+    }
+    if (ctx->best_video_index <0)
+    {
+        SAVLOGW("no video in media");
+    }
+
+    if (ctx->best_video_index < 0 && ctx->best_audio_index < 0) {
+        return SAVED_E_NO_MEDIAFILE;
+    }
+    return SAVED_OP_OK;
 }
+
 
 int saved_format_open_output(SAVEDContext* ctx) {
     return SAVED_E_UNDEFINE;
+}
+
+int saved_fromat_get_pkt(SAVEDFormat *ctx, AVPacket *pkt) {
+    RETIFNULL(ctx) SAVED_E_USE_NULL;
+    RETIFNULL(pkt) SAVED_E_USE_NULL;
+    RETIFNULL(ctx->fmt) SAVED_E_USE_NULL;
+    if (av_read_frame(ctx->fmt, pkt) < 0) {
+        SAVLOGE("av read frame error");
+        return SAVED_E_AVLIB_ERROR;
+    }
+    return SAVED_OP_OK;
 }

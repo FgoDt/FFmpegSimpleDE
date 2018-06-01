@@ -19,21 +19,35 @@ static int open_encoder() {
 static int open_decoder() {
 }
 
-static int open_encoder_format() {
-}
 
 
 int saved_internal_open(SAVEDInternalContext *ictx,const char* path, const char *options) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
 
+    int ret = 0;
     if (ictx->isencoder&&path!=NULL)
     {
-        saved_format_open_output(ictx->fmt, path, options);
+       ret = saved_format_open_output(ictx->fmt, path, options);
     }
     else if(path!=NULL)
     {
-        saved_format_open_input(ictx->fmt, path, options);
+       ret = saved_format_open_input(ictx->fmt, path, options);
     }
+
+    if (ret != SAVED_OP_OK)
+    {
+        return ret;
+    }
+
+    if (ictx->isencoder)
+    {
+        return SAVED_E_UNDEFINE;
+    }
+    else
+    {
+        
+    }
+    
 
     return SAVED_E_UNDEFINE;
 }
