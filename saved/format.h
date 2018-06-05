@@ -5,6 +5,7 @@
 
 typedef struct SAVEDFormat {
     AVFormatContext *fmt;
+    enum AVMediaType *allTypes;
     int best_audio_index;
     int best_video_index;
 }SAVEDFormat;
@@ -15,6 +16,6 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
 
 int saved_format_open_output(SAVEDFormat* ctx,const char *path,const char *options);
 
-int saved_fromat_get_pkt(SAVEDFormat *ctx, AVPacket *pkt);
+int saved_format_get_pkt(SAVEDFormat *ctx, AVPacket *pkt);
 
 SAVEDFormat *saved_format_close();

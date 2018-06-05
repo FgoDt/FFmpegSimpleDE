@@ -20,6 +20,12 @@ static int open_decoder() {
 }
 
 
+void saved_copy_pkt_dsc(SAVEDPkt *pkt) {
+    AVPacket *ipkt = pkt->internalPkt;
+    pkt->duration = ipkt->duration;
+    pkt->pts = ipkt->pts;
+    pkt->size = ipkt->size;
+}
 
 int saved_internal_open(SAVEDInternalContext *ictx,const char* path, const char *options) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
@@ -54,13 +60,36 @@ int saved_internal_open(SAVEDInternalContext *ictx,const char* path, const char 
 
 
 
-int close() {
 
+int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    RETIFNULL(pkt) SAVED_E_USE_NULL;
+
+    pkt->internalPkt = av_packet_alloc();
+
+    int ret =  saved_format_get_pkt(ictx->fmt, pkt->internalPkt);
+    if (ret != SAVED_OP_OK) {
+        return ret;
+    }
+
+    saved_copy_pkt_dsc(pkt);
+    AVPacket *ipkt = (AVPacket*)pkt->internalPkt;
+    pkt->type = ictx->fmt->allTypes[ipkt->stream_index];
+
+    return SAVED_OP_OK;
 }
 
-int get_pkt() {
+int saved_internal_send_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
+
+    return SAVED_E_UNDEFINE;
 }
 
-int send_pkt() {
+int saved_internal_get_frame(SAVEDInternalContext *ictx, SAVEDFrame *f) {
 
+    return SAVED_E_UNDEFINE;
+}
+
+int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f) {
+
+    return SAVED_E_UNDEFINE;
 }

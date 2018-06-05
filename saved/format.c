@@ -37,6 +37,20 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
         return SAVED_E_AVLIB_ERROR;
     }
 
+    if (ctx->fmt->nb_streams<0)
+    {
+        SAVLOGE("streams nb < 0");
+        return SAVED_E_AVLIB_ERROR;
+    }
+
+    ctx->allTypes = (enum MediaType*)malloc(sizeof(enum MediaType)*ctx->fmt->nb_streams);
+    memset(ctx->allTypes, AVMEDIA_TYPE_UNKNOWN, sizeof(enum MediaType)*ctx->fmt->nb_streams);
+    
+    for (size_t i = 0; i < ctx->fmt->nb_streams; i++)
+    {
+        ctx->allTypes[i] = ctx->fmt->streams[i]->codecpar->codec_type;
+    }
+
     ctx->best_audio_index =  av_find_best_stream(ctx->fmt, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
     ctx->best_video_index = av_find_best_stream(ctx->fmt, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 
@@ -60,7 +74,7 @@ int saved_format_open_output(SAVEDContext* ctx) {
     return SAVED_E_UNDEFINE;
 }
 
-int saved_fromat_get_pkt(SAVEDFormat *ctx, AVPacket *pkt) {
+int saved_format_get_pkt(SAVEDFormat *ctx, AVPacket *pkt) {
     RETIFNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(pkt) SAVED_E_USE_NULL;
     RETIFNULL(ctx->fmt) SAVED_E_USE_NULL;

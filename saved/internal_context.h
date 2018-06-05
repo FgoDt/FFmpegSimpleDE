@@ -20,3 +20,12 @@ SAVEDInternalContext* saved_internal_alloc();
  * return >= 0 if ok 
  **/
 int saved_internal_open(SAVEDInternalContext *ictx, const char* path, const char *options);
+
+
+int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt);
+
+int saved_internal_send_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt);
+
+int saved_internal_get_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
+
+int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
