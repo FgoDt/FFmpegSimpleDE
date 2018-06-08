@@ -1,5 +1,11 @@
-#include "codec_context.h"
+#include "codec.h"
 #include "format.h"
+#include<libavformat/avformat.h>
+#include<libavcodec/avcodec.h>
+#include<libswresample/swresample.h>
+#include<libswscale/swscale.h>
+#include<libavutil/time.h>
+#include<libavutil/avutil.h>
 
 typedef struct SAVEDInternalContext{
     SAVEDFormat *fmt;

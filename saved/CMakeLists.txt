@@ -10,6 +10,8 @@ add_library (saved  saved.c
                     log.c
                     format.c
                     internal_context.c
+                    codec.c 
+                    decoder.c
 )
 
 

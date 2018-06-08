@@ -13,6 +13,9 @@ SAVEDFormat* saved_format_alloc() {
     fmt->fmt = NULL;
     fmt->best_audio_index = -1;
     fmt->best_video_index = -1;
+    fmt->astream = NULL;
+    fmt->vstream = NULL;
+    fmt->sstream = NULL;
     return fmt;
 }
 
@@ -54,6 +57,7 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     ctx->best_audio_index =  av_find_best_stream(ctx->fmt, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
     ctx->best_video_index = av_find_best_stream(ctx->fmt, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 
+
     if (ctx->best_audio_index <0)
     {
         SAVLOGW("no audio in media");
@@ -62,6 +66,8 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     {
         SAVLOGW("no video in media");
     }
+    ctx->astream = ctx->fmt->streams[ctx->best_audio_index];
+    ctx->vstream = ctx->fmt->streams[ctx->best_video_index];
 
     if (ctx->best_video_index < 0 && ctx->best_audio_index < 0) {
         return SAVED_E_NO_MEDIAFILE;
@@ -78,9 +84,14 @@ int saved_format_get_pkt(SAVEDFormat *ctx, AVPacket *pkt) {
     RETIFNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(pkt) SAVED_E_USE_NULL;
     RETIFNULL(ctx->fmt) SAVED_E_USE_NULL;
+
     if (av_read_frame(ctx->fmt, pkt) < 0) {
         SAVLOGE("av read frame error");
         return SAVED_E_AVLIB_ERROR;
     }
     return SAVED_OP_OK;
+}
+
+int saved_format_send_pkt(SAVEDFormat *ctx, AVPacket *pkt) {
+    return SAVED_E_UNDEFINE;
 }
