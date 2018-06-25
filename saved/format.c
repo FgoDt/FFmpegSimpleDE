@@ -1,5 +1,5 @@
 #include "format.h"
-#include "codec_context.h"
+#include "codec.h"
 #include <libavformat/avformat.h>
 #include "log.h"
 

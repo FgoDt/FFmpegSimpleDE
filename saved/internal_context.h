@@ -1,3 +1,8 @@
+#ifndef __INTERNAL_CONTEXT_H__
+#define __INTERNAL_CONTEXT_H__
+
+
+#include "saved.h"
 #include "codec.h"
 #include "format.h"
 #include<libavformat/avformat.h>
@@ -35,3 +40,5 @@ int saved_internal_send_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt);
 int saved_internal_get_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
 
 int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
+
+#endif __INTERNAL_CONTEXT_H__

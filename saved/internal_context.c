@@ -1,6 +1,8 @@
+
 #include "internal_context.h"
 #include "encoder.h"
 #include "decoder.h"
+#include "log.h"
 
 SAVEDInternalContext* saved_internal_alloc() {
     SAVEDInternalContext *ctx = (SAVEDInternalContext*)malloc(sizeof(SAVEDInternalContext));

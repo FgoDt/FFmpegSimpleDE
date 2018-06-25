@@ -1,4 +1,8 @@
-#pragma once
+#ifndef __DEFINE_H__
+#define __DEFINE_H__
+
+
+
 
 #define SAVEDLOG_LEVEL_E 0
 #define SAVEDLOG_LEVEL_W 1
@@ -31,3 +35,5 @@
 #define SAVED_E_USE_NULL -255
 #define SAVED_E_FATAL -0xfff
 #define SAVED_E_UNDEFINE -0xffff
+
+#endif // !__DEFINE_H__

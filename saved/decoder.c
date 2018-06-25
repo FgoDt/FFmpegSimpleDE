@@ -1,20 +1,88 @@
 #include "decoder.h"
+#include <libavutil/hwcontext.h>
+#include "log.h"
 
 #ifdef  __ANDROID_NDK__
 #include <jni.h>
 #include <libavcodec/jni.h>
 #endif
 
+enum AVPixelFormat saved_find_fmt_by_hw_type(const enum AVHWDeviceType type) {
+    enum AVPixelFormat fmt;
+    switch (type)
+    {
+    case AV_HWDEVICE_TYPE_VAAPI:
+        fmt = AV_PIX_FMT_VAAPI;
+        break;
+    case AV_HWDEVICE_TYPE_CUDA:
+        fmt = AV_PIX_FMT_CUDA;
+        break;
+    case AV_HWDEVICE_TYPE_D3D11VA:
+        fmt = AV_PIX_FMT_D3D11;
+        break;
+    case AV_HWDEVICE_TYPE_DXVA2:
+        fmt = AV_PIX_FMT_DXVA2_VLD;
+        break;
+    case AV_HWDEVICE_TYPE_VIDEOTOOLBOX:
+        fmt = AV_PIX_FMT_VIDEOTOOLBOX;
+        break;
+    default:
+        fmt = AV_PIX_FMT_NONE;
+        break;
+    }
 
-int saved_decoder_create(SAVEDInternalContext *ictx) {
+    return fmt;
+}
+
+enum AVPixelFormat saved_get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts) {
+    const enum AVPixelFormat *p;
+    for (p = pix_fmts; *p != -1; p++)
+    {
+        if (*p == ctx->pix_fmt)
+        {
+            return *p;
+        }
+    }
+    return AV_PIX_FMT_NONE;
+}
+
+int saved_hw_decoder_init(SAVEDCodecContext *ctx, const enum AVHWDeviceType type) {
+    RETIFNULL(ctx) SAVED_E_USE_NULL;
+
+    if (0!=av_hwdevice_ctx_create(&ctx->decoderctx->hw_bufferref,type,NULL,NULL,0))
+    {
+       SAVLOGW("create hw device error");
+        
+        return SAVED_OP_OK;
+    }
+
+    av_buffer_ref(ctx->decoderctx->hw_bufferref);
+
+    return SAVED_OP_OK;
+
+}
+
+SAVEDCodecContext* saved_decoder_alloc() {
+    SAVEDCodecContext *savctx = (SAVEDCodecContext*)av_mallocz(sizeof(SAVEDCodecContext));
+    if (savctx==NULL)
+    {
+        SAVLOGE("no mem");
+        return NULL;
+    }
+    return savctx;
+}
+
+int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
     RETIFNULL(ictx->savctx) SAVED_E_USE_NULL;
 
     SAVEDCodecContext *savctx = ictx->savctx;
     AVStream *astream = ictx->fmt->astream;
     AVStream *vstream = ictx->fmt->vstream;
+    AVCodec *acodec = NULL;
+    AVCodec *vcodec = NULL;
 
-
+    //create audio deocer
     if (astream)
     {
         savctx->actx = avcodec_alloc_context3(NULL);
@@ -22,7 +90,7 @@ int saved_decoder_create(SAVEDInternalContext *ictx) {
             SAVLOGE("can't parse par to context");
             return SAVED_E_AVLIB_ERROR;
         }
-        AVCodec *acodec = avcodec_find_decoder(savctx->actx->codec_id);
+        acodec = avcodec_find_decoder(savctx->actx->codec_id);
         if (acodec == NULL)
         {
             SAVLOGE("can't find decoder for audio ");
@@ -31,6 +99,8 @@ int saved_decoder_create(SAVEDInternalContext *ictx) {
         SAVLOGD("find audio default decoder: %s", acodec->name);
         
     }
+
+    //create video decoder
     if (vstream)
     {
         savctx->vctx = avcodec_alloc_context3(NULL);
@@ -42,6 +112,7 @@ int saved_decoder_create(SAVEDInternalContext *ictx) {
         if (vcodec == NULL)
         {
             SAVLOGE("can't find decoder for video");
+
             return SAVED_E_AVLIB_ERROR;
         }
         SAVLOGD("find video default decoder: %s", vcodec->name);
@@ -93,16 +164,96 @@ int saved_decoder_create(SAVEDInternalContext *ictx) {
         skip_mc:
 
         //use hardware
-        if (savctx->usehw)
+        if (savctx->decoderctx->use_hw)
         {
+            enum AVHWDeviceType hwdevice;
+            hwdevice = AV_HWDEVICE_TYPE_NONE;
+
+            char *hwname = NULL;
+            
+            if (chwname!=NULL)
+            {
+                hwname = chwname;
+                goto set_hw_name_done;
+            }
+
+#if _WIN32||_WIN64
+            hwname = "dxva2";
+#endif // _WIN32||_WIN64
+
+#if TARGET_OS_IPHONE
+            hwname = "videotoolbox";
+#endif  
+            if (hwname == NULL)
+            {
+                goto skip_hw;
+            }
+
+            set_hw_name_done:
+
+            savctx->decoderctx->hw_name = hwname;
+
+            hwdevice = av_hwdevice_find_type_by_name(hwname);
+
+            if (hwdevice == AV_HWDEVICE_TYPE_NONE)
+            {
+                SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hwdevice by name :%s", hwname);
+                goto skip_hw;
+            }
+
+            enum AVPixelFormat hwpixfmt = saved_find_fmt_by_hw_type(hwdevice);
+
+            if (hwpixfmt == -1)
+            {
+                SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hw fmt by hwname :%", hwname);
+                goto skip_hw;
+            }
+
+
+            savctx->vctx->pix_fmt = hwpixfmt;
+            savctx->vctx->get_format = saved_get_hw_format;
+
+            if (saved_hw_decoder_init(savctx,hwdevice) == SAVED_OP_OK)
+            {
+                ictx->savctx->decoderctx->use_hw = 1;
+                SAVEDLOGD("init hw decoder done");
+            }
+            else
+            {
+                SAVEDLOGW("init hw decoder error");
+                av_buffer_unref(&savctx->decoderctx->hw_bufferref);
+                savctx->decoderctx->use_hw= 0;
+            }
 
         }
+
+
+        skip_hw:
+
+        if (acodec!=NULL&&0!=avcodec_open2(savctx->actx,acodec,NULL))
+        {
+            SAVLOGE("audio codec open error");
+        }
+
+        if (vcodec!=NULL&&0!=avcodec_open2(savctx->vctx,vcodec,NULL))
+        {
+            SAVLOGE("video codec open error");
+        }
+
+
+
     }
 
 }
 
-int saved_decoder_send_pkt(SAVEDInternalContext *ictx, AVPacket *pkt);
+int saved_decoder_send_pkt(SAVEDInternalContext *ictx, AVPacket *pkt) {
+    return SAVED_E_UNDEFINE;
+}
 
-int saved_decoder_recive_frame(SAVEDInternalContext *ictx, AVFrame *f);
+int saved_decoder_recive_frame(SAVEDInternalContext *ictx, AVFrame *f) {
+    return SAVED_E_UNDEFINE;
+}
 
-int saved_decoder_close(SAVEDInternalContext *ictx);
+int saved_decoder_close(SAVEDInternalContext *ictx) {
+    return SAVED_E_UNDEFINE;
+}
