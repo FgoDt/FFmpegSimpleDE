@@ -1,5 +1,5 @@
 
-#include "internal_context.h"
+#include "internal.h"
 #include "encoder.h"
 #include "decoder.h"
 #include "log.h"
@@ -18,9 +18,22 @@ SAVEDInternalContext* saved_internal_alloc() {
 }
 
 static int open_encoder() {
+    return SAVED_E_FATAL;
 }
 
-static int open_decoder() {
+static int open_decoder(SAVEDInternalContext *ictx) {
+
+
+    ictx->savctx = saved_codec_alloc();
+    if(ictx->savctx == NULL){
+        SAVLOGE("saved codec alloc error");
+
+        return SAVED_E_NO_MEM;
+    }
+    ((SAVEDCodecContext*)(ictx->savctx))->isencoder = ictx->isencoder;
+
+    return  saved_codec_open(ictx->savctx,ictx->fmt);
+
 }
 
 
@@ -55,7 +68,7 @@ int saved_internal_open(SAVEDInternalContext *ictx,const char* path, const char 
     }
     else
     {
-        
+        return open_decoder(ictx);
     }
     
 

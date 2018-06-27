@@ -1,16 +1,17 @@
-#ifndef __FORMAT_H__
-#define __FORMAT_H__
+#pragma once
 
 #include "saved.h"
 #include "define.h"
-#include<libavformat/avformat.h>
+#include <libavformat/avformat.h>
+
+#define  MAX_STREAMS 10
 
 typedef struct SAVEDFormat {
     AVFormatContext *fmt;
     AVStream *astream; //best_audio stream;
     AVStream *vstream; //best video stream;
     AVStream *sstream; //best sub stream
-    enum AVMediaType *allTypes;
+    enum AVMediaType allTypes[MAX_STREAMS];
     int best_audio_index;
     int best_video_index;
 }SAVEDFormat;
@@ -26,5 +27,3 @@ int saved_format_get_pkt(SAVEDFormat *ctx, AVPacket *pkt);
 int saved_format_send_pkt(SAVEDFormat *ctx, AVPacket *pkt);
 
 SAVEDFormat *saved_format_close();
-
-#endif // !__FORMAT_H__

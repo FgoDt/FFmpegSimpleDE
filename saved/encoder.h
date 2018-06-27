@@ -2,11 +2,8 @@
 #define __ENCODER_H__
 
 
-typedef struct SAVEDEncoderContext {
-    int use_hw;
-    char *hw_name;
-    AVBufferRef *hw_bufferref;
-}SAVEDEncoderContext;
+
+
 
 int saved_encoder_create();
 

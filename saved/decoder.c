@@ -1,6 +1,7 @@
 #include "decoder.h"
 #include <libavutil/hwcontext.h>
 #include "log.h"
+#include "define.h"
 
 #ifdef  __ANDROID_NDK__
 #include <jni.h>
@@ -46,24 +47,26 @@ enum AVPixelFormat saved_get_hw_format(AVCodecContext *ctx, const enum AVPixelFo
     return AV_PIX_FMT_NONE;
 }
 
-int saved_hw_decoder_init(SAVEDCodecContext *ctx, const enum AVHWDeviceType type) {
+int saved_hw_decoder_init(SAVEDDecoderContext *ctx, const enum AVHWDeviceType type) {
     RETIFNULL(ctx) SAVED_E_USE_NULL;
 
-    if (0!=av_hwdevice_ctx_create(&ctx->decoderctx->hw_bufferref,type,NULL,NULL,0))
+    if (0!=av_hwdevice_ctx_create(&ctx->hw_bufferref,type,NULL,NULL,0))
     {
        SAVLOGW("create hw device error");
         
         return SAVED_OP_OK;
     }
 
-    av_buffer_ref(ctx->decoderctx->hw_bufferref);
+    av_buffer_ref(ctx->hw_bufferref);
 
     return SAVED_OP_OK;
 
 }
 
-SAVEDCodecContext* saved_decoder_alloc() {
-    SAVEDCodecContext *savctx = (SAVEDCodecContext*)av_mallocz(sizeof(SAVEDCodecContext));
+
+
+SAVEDDecoderContext* saved_decoder_alloc() {
+    SAVEDDecoderContext *savctx = (SAVEDDecoderContext*)av_mallocz(sizeof(SAVEDDecoderContext));
     if (savctx==NULL)
     {
         SAVLOGE("no mem");
@@ -72,13 +75,16 @@ SAVEDCodecContext* saved_decoder_alloc() {
     return savctx;
 }
 
-int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
-    RETIFNULL(ictx) SAVED_E_USE_NULL;
-    RETIFNULL(ictx->savctx) SAVED_E_USE_NULL;
+int saved_decoder_init(SAVEDDecoderContext *ictx, SAVEDFormat *fmt, char *hwname){
+    return  saved_decoder_create(ictx,hwname,fmt->astream,fmt->vstream,fmt->astream);
+}
 
-    SAVEDCodecContext *savctx = ictx->savctx;
-    AVStream *astream = ictx->fmt->astream;
-    AVStream *vstream = ictx->fmt->vstream;
+int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audiostream, AVStream *videostream, AVStream *substream) {
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+
+    SAVEDDecoderContext *savctx = ictx;
+    AVStream *astream = audiostream;
+    AVStream *vstream = videostream;
     AVCodec *acodec = NULL;
     AVCodec *vcodec = NULL;
 
@@ -96,7 +102,7 @@ int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
             SAVLOGE("can't find decoder for audio ");
             return SAVED_E_AVLIB_ERROR;
         }
-        SAVLOGD("find audio default decoder: %s", acodec->name);
+        SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"find audio default decoder: %s", acodec->name);
         
     }
 
@@ -108,14 +114,14 @@ int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
             SAVLOGE("can't parse par to context");
             return SAVED_E_AVLIB_ERROR;
         }
-        AVCodec *vcodec = avcodec_find_decoder(savctx->vctx->codec_id);
+        vcodec = avcodec_find_decoder(savctx->vctx->codec_id);
         if (vcodec == NULL)
         {
             SAVLOGE("can't find decoder for video");
 
             return SAVED_E_AVLIB_ERROR;
         }
-        SAVLOGD("find video default decoder: %s", vcodec->name);
+        SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"find video default decoder: %s", vcodec->name);
 
 #if __ANDROID_NDK__
 
@@ -160,11 +166,12 @@ int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
         vcodec = MCCodec;
 
 
-#endif
         skip_mc:
+#endif
+
 
         //use hardware
-        if (savctx->decoderctx->use_hw)
+        if (savctx->use_hw)
         {
             enum AVHWDeviceType hwdevice;
             hwdevice = AV_HWDEVICE_TYPE_NONE;
@@ -191,7 +198,7 @@ int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
 
             set_hw_name_done:
 
-            savctx->decoderctx->hw_name = hwname;
+            savctx->hw_name = hwname;
 
             hwdevice = av_hwdevice_find_type_by_name(hwname);
 
@@ -205,7 +212,7 @@ int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
 
             if (hwpixfmt == -1)
             {
-                SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hw fmt by hwname :%", hwname);
+                SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hw fmt by hwname :%s", hwname);
                 goto skip_hw;
             }
 
@@ -215,14 +222,14 @@ int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
 
             if (saved_hw_decoder_init(savctx,hwdevice) == SAVED_OP_OK)
             {
-                ictx->savctx->decoderctx->use_hw = 1;
-                SAVEDLOGD("init hw decoder done");
+                savctx->use_hw = 1;
+                SAVLOGD("init hw decoder done");
             }
             else
             {
-                SAVEDLOGW("init hw decoder error");
-                av_buffer_unref(&savctx->decoderctx->hw_bufferref);
-                savctx->decoderctx->use_hw= 0;
+                SAVLOGW("init hw decoder error");
+                av_buffer_unref(&savctx->hw_bufferref);
+                savctx->use_hw= 0;
             }
 
         }
@@ -244,16 +251,18 @@ int saved_decoder_create(SAVEDInternalContext *ictx,char *chwname) {
 
     }
 
+    return SAVED_OP_OK;
+
 }
 
-int saved_decoder_send_pkt(SAVEDInternalContext *ictx, AVPacket *pkt) {
+int saved_decoder_send_pkt(SAVEDDecoderContext *ictx, AVPacket *pkt) {
     return SAVED_E_UNDEFINE;
 }
 
-int saved_decoder_recive_frame(SAVEDInternalContext *ictx, AVFrame *f) {
+int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f) {
     return SAVED_E_UNDEFINE;
 }
 
-int saved_decoder_close(SAVEDInternalContext *ictx) {
+int saved_decoder_close(SAVEDDecoderContext *ictx) {
     return SAVED_E_UNDEFINE;
 }

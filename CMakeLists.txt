@@ -3,22 +3,30 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\include")
-link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
+include_directories("/home/fftest/FFmpeg/fflibs/linux64/include")
+link_directories("/home/fftest/FFmpeg/fflibs/linux64/lib")
 
-project ("test")
+add_definitions("-Wall -g")
+
+project ("est")
 
 # 包含子项目。
 add_subdirectory ("saved")
 
 
-add_executable(test test.c)
+add_executable(est test.c)
 
 target_link_libraries(
-    test
+    est
     saved
     
-    avcodec
     avformat
+    avcodec
+    avfilter
+    swscale
+    swresample
     avutil
+
+    m 
+    pthread
 )

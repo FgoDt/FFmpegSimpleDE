@@ -7,6 +7,12 @@ cmake_minimum_required (VERSION 3.8)
 
 # 将源添加到此项目的可执行文件。
 add_library (saved  saved.c
+                    log.c
+                    internal.c
+                    codec.c
+                    decoder.c
+                    encoder.c
+                    format.c
 )
 
 

@@ -3,22 +3,21 @@
 
 
 
-#include "internal_context.h"
+#include "codec.h"
 #include <libswresample/swresample.h>
+#include <libavcodec/avcodec.h>
 
-typedef struct SAVEDDecoderContext {
-    int use_hw;
-    char *hw_name;
-    AVBufferRef *hw_bufferref;
-    
-}SAVEDDecoderContext;
 
-int saved_decoder_create(SAVEDInternalContext *ictx,char *name);
+SAVEDDecoderContext* saved_decoder_alloc();
 
-int saved_decoder_send_pkt(SAVEDInternalContext *ictx,AVPacket *pkt);
+int saved_decoder_init(SAVEDDecoderContext *ictx, SAVEDFormat *fmt, char *hwname);
 
-int saved_decoder_recive_frame(SAVEDInternalContext *ictx, AVFrame *f);
+int saved_decoder_create(SAVEDDecoderContext *ictx,char *name,AVStream *audiostream, AVStream *videostream, AVStream *substream);
 
-int saved_decoder_close(SAVEDInternalContext *ictx);
+int saved_decoder_send_pkt(SAVEDDecoderContext *ictx,AVPacket *pkt);
+
+int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f);
+
+int saved_decoder_close(SAVEDDecoderContext *ictx);
 
 #endif // !__DECODER_H__

@@ -1,11 +1,10 @@
-// saved.cpp: 定义应用程序的入口点。
-//
+#if 1
 
 #include "saved.h"
 #include "log.h"
 #include "define.h"
 #include "codec.h"
-#include "internal_context.h"
+#include "internal.h"
 #include "format.h"
 
 #include<libavformat/avformat.h>
@@ -17,6 +16,7 @@
 
 
 SAVEDContext* saved_create_context() {
+    saved_set_log_level(SAVEDLOG_LEVEL_D);
     SAVEDContext *ctx = (SAVEDContext*)malloc(sizeof(SAVEDContext));
     ctx->ictx = NULL;
     ctx->openmark = OPENMARK;
@@ -26,7 +26,7 @@ SAVEDContext* saved_create_context() {
 
 
 int saved_del_context() {
-
+return -1;
 }
 
 
@@ -66,6 +66,7 @@ SAVEDPkt* saved_create_pkt() {
     pkt->size = -1;
     pkt->type = AVMEDIA_TYPE_UNKNOWN;
     pkt->useinternal = 0;
+    return pkt;
 }
 
 
@@ -88,10 +89,11 @@ SAVEDFrame* saved_create_frame() {
     f->data = NULL;
     f->duration = -1;
     f->internalframe = NULL;
-    f->pts - 1;
+    f->pts = -1;
     f->size = -1;
     f->type = AVMEDIA_TYPE_UNKNOWN;
     f->useinternal = 0;
+    return f;
 }
 
 int saved_del_frame(SAVEDFrame *pkt) {
@@ -163,3 +165,18 @@ int saved_get_pkt_raw(SAVEDContext *ctx, unsigned char * data, int size) {
 }
 
 
+
+#else
+
+#include "saved.h"
+#include "define.h"
+
+int test(){
+    saved_set_log_level(3);
+    SAVLOGD("hello");
+    SAVLOGW("hello");
+    SAVLOGE("hello");
+    return 0;
+}
+
+#endif

@@ -1,6 +1,7 @@
-#ifndef __DEFINE_H__
-#define __DEFINE_H__
-
+#ifndef __SAVED_DEFINE_H__
+#define __SAVED_DEFINE_H__
+#include <stdio.h>
+#include "log.h"
 
 
 
@@ -8,11 +9,11 @@
 #define SAVEDLOG_LEVEL_W 1
 #define SAVEDLOG_LEVEL_D 2
 
-#define SAVEDFUNCTAB __FILE__##" FUNC["##__FUNCTION__##"] "
-#define SAVEDLOG(ctx,level,fmt)  saved_log(ctx,level,SAVEDFUNCTAB##fmt,NULL)
-#define SAVEDLOG1(ctx,level,fmt,i)  saved_log(ctx,level,SAVEDFUNCTAB##fmt,i)
-#define SAVEDLOG2(ctx,level,fmt,i,j)  saved_log(ctx,level,SAVEDFUNCTAB##fmt,i,j)
-#define SAVEDLOG3(ctx,level,fmt,i,j,k)  saved_log(ctx,level,SAVEDFUNCTAB##fmt,i,j,k)
+
+#define SAVEDLOG(ctx,level,fmt) saved_logp(ctx,level,__FILE__,__FUNCTION__,fmt)
+#define SAVEDLOG1(ctx,level,fmt,i) saved_logp(ctx,level,__FILE__,__FUNCTION__,fmt,i)
+#define SAVEDLOG2(ctx,level,fmt,i,j) saved_logp(ctx,level,__FILE__,__FUNCTION__,fmt,i,j)
+#define SAVEDLOG3(ctx,level,fmt,i,j,k) saved_logp(ctx,level,__FILE__,__FUNCTION__,fmt,i,j,k)
 
 #define SAVEDLOGE(ctx,fmt) SAVEDLOG(ctx,SAVEDLOG_LEVEL_E,fmt)
 #define SAVEDLOGW(ctx,fmt) SAVEDLOG(ctx,SAVEDLOG_LEVEL_W,fmt)

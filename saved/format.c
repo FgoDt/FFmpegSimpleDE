@@ -28,7 +28,6 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
 
     RETIFNULL(path) SAVED_E_USE_NULL;
 
-    av_register_all();
 
     if (avformat_open_input(&ctx->fmt, path, NULL, NULL) < 0) {
         SAVLOGE("open input error");
@@ -46,8 +45,12 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
         return SAVED_E_AVLIB_ERROR;
     }
 
-    ctx->allTypes = (enum MediaType*)malloc(sizeof(enum MediaType)*ctx->fmt->nb_streams);
-    memset(ctx->allTypes, AVMEDIA_TYPE_UNKNOWN, sizeof(enum MediaType)*ctx->fmt->nb_streams);
+
+
+    for(int i = 0; i<MAX_STREAMS;i++){
+        ctx->allTypes[i] = AVMEDIA_TYPE_UNKNOWN;
+    }
+
     
     for (size_t i = 0; i < ctx->fmt->nb_streams; i++)
     {
@@ -61,10 +64,14 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     if (ctx->best_audio_index <0)
     {
         SAVLOGW("no audio in media");
+    } else{
+        SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"find audio at index : %d",ctx->best_audio_index);
     }
     if (ctx->best_video_index <0)
     {
         SAVLOGW("no video in media");
+    }else{
+        SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"find video at index : %d",ctx->best_video_index);
     }
     ctx->astream = ctx->fmt->streams[ctx->best_audio_index];
     ctx->vstream = ctx->fmt->streams[ctx->best_video_index];
@@ -76,7 +83,7 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
 }
 
 
-int saved_format_open_output(SAVEDContext* ctx) {
+int saved_format_open_output(SAVEDFormat* ctx, const char *path, const char *options) {
     return SAVED_E_UNDEFINE;
 }
 

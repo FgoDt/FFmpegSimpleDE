@@ -14,7 +14,8 @@
 
 typedef struct SAVEDInternalContext{
     SAVEDFormat *fmt;
-    SAVEDCodecContext *savctx;
+    SAVEDCodecContext *ctx;
+    void *savctx;
     int isencoder;
 }SAVEDInternalContext;
 
@@ -41,4 +42,4 @@ int saved_internal_get_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
 
 int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
 
-#endif __INTERNAL_CONTEXT_H__
+#endif 
