@@ -3,6 +3,7 @@
 #include "decoder.h"
 #include "define.h"
 #include "decoder.h"
+#include "saved.h"
 
 SAVEDCodecContext *saved_codec_alloc(){
     SAVEDCodecContext *ctx = (SAVEDCodecContext*)malloc(sizeof(*ctx));
@@ -40,7 +41,8 @@ int saved_codec_send_pkt(SAVEDCodecContext  *ictx, SAVEDPkt *pkt) {
     }
     else
     {
-       ret = saved_decoder_send_pkt(NULL, NULL);
+       ret = saved_decoder_send_pkt(ictx->decoderctx,pkt);
+       //ret = saved_decoder_send_pkt(NULL, NULL);
     }
 
     return ret;
@@ -97,7 +99,15 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
     }
     else
     {
-        ret = saved_decoder_recive_frame(NULL,NULL);
+        ret = saved_decoder_recive_frame(ictx->decoderctx,f->internalframe,f->type);
+        if(ret == SAVED_OP_OK){
+            AVFrame *iframe = (AVFrame*) f->internalframe;
+            if(f->data == NULL){
+                f->data = malloc(iframe->linesize[0]*1.5);
+            }
+            memcpy(f->data,iframe->extended_data,iframe->linesize[0]*1.5);
+            f->size = iframe->linesize[0]*1.5;
+        }
     }
 
     return ret;

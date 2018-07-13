@@ -14,7 +14,6 @@
 
 typedef struct SAVEDInternalContext{
     SAVEDFormat *fmt;
-    SAVEDCodecContext *ctx;
     void *savctx;
     int isencoder;
 }SAVEDInternalContext;

@@ -88,11 +88,11 @@ SAVEDFrame* saved_create_frame() {
     SAVEDFrame *f = (SAVEDFrame*)malloc(sizeof(SAVEDFrame));
     f->data = NULL;
     f->duration = -1;
-    f->internalframe = NULL;
+    f->internalframe = av_frame_alloc();
     f->pts = -1;
     f->size = -1;
     f->type = AVMEDIA_TYPE_UNKNOWN;
-    f->useinternal = 0;
+    f->useinternal = 1;
     return f;
 }
 
@@ -124,12 +124,12 @@ int saved_send_pkt(SAVEDContext *ctx, SAVEDPkt *pkt) {
     return ret;
 }
 
-int saved_get_frame(SAVEDContext *ctx, SAVEDFrame *f) {
+int saved_get_frame(SAVEDContext *ctx, SAVEDFrame *f){
 
     RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(f) SAVED_E_USE_NULL;
 
-    int ret = saved_internal_get_frame(ctx->ictx, f);
+    int ret = saved_internal_get_frame(ctx->ictx,f);
     return ret;
 }
 

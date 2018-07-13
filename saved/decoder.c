@@ -1,7 +1,10 @@
 #include "decoder.h"
 #include <libavutil/hwcontext.h>
+#include <libavutil/imgutils.h>
 #include "log.h"
 #include "define.h"
+#include "saved.h"
+#include "videoscale.h"
 
 #ifdef  __ANDROID_NDK__
 #include <jni.h>
@@ -72,11 +75,32 @@ SAVEDDecoderContext* saved_decoder_alloc() {
         SAVLOGE("no mem");
         return NULL;
     }
+    savctx->ipkt = av_packet_alloc();
+    savctx->isrc_frame = av_frame_alloc();
+    savctx->idst_frame = av_frame_alloc();
     return savctx;
 }
 
 int saved_decoder_init(SAVEDDecoderContext *ictx, SAVEDFormat *fmt, char *hwname){
     return  saved_decoder_create(ictx,hwname,fmt->astream,fmt->vstream,fmt->astream);
+}
+
+static  int set_video_scale(SAVEDDecoderContext *ctx){
+    ctx->videoScaleCtx = saved_video_scale_alloc();
+    RETIFNULL(ctx->videoScaleCtx) SAVED_E_USE_NULL;
+
+    saved_video_scale_set_picpar(ctx->videoScaleCtx->src,ctx->vctx->pix_fmt,ctx->vctx->height,ctx->vctx->width);
+    //default output pix format yuv420p
+    saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height,ctx->vctx->width);
+    int ret = saved_video_scale_open(ctx->videoScaleCtx);
+
+    ctx->picswbuf = (uint8_t*)malloc(av_image_get_buffer_size(ctx->videoScaleCtx->tgt->fmt,
+            ctx->videoScaleCtx->tgt->height,ctx->videoScaleCtx->tgt->height,1));
+
+    av_image_fill_arrays(ctx->idst_frame->data,ctx->idst_frame->linesize,ctx->picswbuf,ctx->videoScaleCtx->tgt->fmt,
+    ctx->videoScaleCtx->tgt->height,ctx->videoScaleCtx->tgt->width,1);
+
+    return  ret;
 }
 
 int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audiostream, AVStream *videostream, AVStream *substream) {
@@ -251,18 +275,118 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
     }
 
+    set_video_scale(ictx);
+
     return SAVED_OP_OK;
 
 }
 
-int saved_decoder_send_pkt(SAVEDDecoderContext *ictx, AVPacket *pkt) {
+ int static saved_audio_decod(SAVEDDecoderContext *ictx, AVPacket *pkt){
+     if(ictx->actx == NULL){
+         SAVLOGE("no actx");
+         return  SAVED_E_USE_NULL;
+     }
+     if(pkt == NULL){
+         SAVLOGE("pkt is NULL");
+         return  SAVED_E_USE_NULL;
+     }
+     //todo
+     int ret = avcodec_send_packet(ictx->actx,pkt);
+     if(ret == AVERROR(EAGAIN)){
+         SAVLOGD("need more data to decode \0");
+     }
+     return  ret;
+}
+
+
+
+int static saved_decode_video(SAVEDDecoderContext *ictx, AVPacket *pkt) {
+    if(ictx->vctx == NULL){
+        SAVLOGE("no actx");
+        return  SAVED_E_USE_NULL;
+    }
+    if(pkt == NULL){
+        SAVLOGE("pkt is NULL");
+        return  SAVED_E_USE_NULL;
+    }
+    int ret = avcodec_send_packet(ictx->vctx,pkt);
+    if(ret == AVERROR(EAGAIN)){
+        SAVLOGD("need more data to decode\n");
+    }
+    if(ret == 0){
+    }
+    return  ret;
+}
+
+
+int saved_decoder_send_pkt(SAVEDDecoderContext *ictx, SAVEDPkt *pkt) {
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    RETIFNULL(pkt) SAVED_E_USE_NULL;
+
+    if(pkt->type == SAVED_MEDIA_TYPE_AUDIO){
+        return saved_audio_decod(ictx,pkt->internalPkt);
+    }
+
+    if(pkt->type == SAVED_MEDIA_TYPE_VIDEO){
+        return  saved_decode_video(ictx,pkt->internalPkt);
+    }
+
     return SAVED_E_UNDEFINE;
 }
 
-int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f) {
-    return SAVED_E_UNDEFINE;
+int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMediaType type) {
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    RETIFNULL(f) SAVED_E_USE_NULL;
+
+    int ret = AVERROR(EFAULT);
+    AVCodecContext *codecContext = NULL;
+    switch (type){
+        case AVMEDIA_TYPE_AUDIO:
+            codecContext = ictx->actx;
+            break;
+        case AVMEDIA_TYPE_VIDEO:
+            codecContext = ictx->vctx;
+            break;
+        case AVMEDIA_TYPE_SUBTITLE:
+            codecContext = ictx->sctx;
+            break;
+        default:
+            break;
+    }
+    if (codecContext == NULL){
+        SAVEDLOG1(NULL,SAVEDLOG_LEVEL_E,"saved recive frame error [ codec is NULL ] mediatype is %d",type);
+        return  SAVED_E_USE_NULL;
+    }
+    ret = avcodec_receive_frame(codecContext,ictx->isrc_frame);
+
+    if(ret == 0 && type == SAVED_MEDIA_TYPE_VIDEO){
+        ret = saved_video_scale(ictx->videoScaleCtx,ictx->isrc_frame,ictx->idst_frame);
+        if(ret == 0){
+            av_image_fill_arrays(f->data,f->linesize,ictx->idst_frame->data,ictx->videoScaleCtx->tgt->fmt,
+                                 ictx->videoScaleCtx->tgt->width,ictx->videoScaleCtx->tgt->height,1);
+        }
+    }
+    return  ret;
+
 }
 
 int saved_decoder_close(SAVEDDecoderContext *ictx) {
+    av_frame_unref(ictx->idst_frame);
+    av_frame_unref(ictx->isrc_frame);
+    av_packet_unref(ictx->ipkt);
+
+    if(ictx->actx){
+        avcodec_close(ictx->actx);
+        ictx->actx = NULL;
+    }
+    if(ictx->vctx){
+        avcodec_close(ictx->vctx);
+        ictx->vctx = NULL;
+    }
+    if(ictx->sctx){
+        avcodec_close(ictx->sctx);
+        ictx->sctx = NULL;
+    }
+
     return SAVED_E_UNDEFINE;
 }

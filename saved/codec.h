@@ -4,6 +4,10 @@
 #include "saved.h"
 #include "format.h"
 #include <libavformat/avformat.h>
+#include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
+#include "videoscale.h"
+
 
 
 typedef struct SAVEDDecoderContext {
@@ -14,6 +18,15 @@ typedef struct SAVEDDecoderContext {
     AVCodecContext *actx; //audio
     AVCodecContext *vctx; //video
     AVCodecContext *sctx; //sub
+
+    AVFrame *idst_frame; // internal swsscale frame
+    AVFrame *isrc_frame; // internal avcodec decode frame
+    AVFrame *ihw_frame;  // internal hard ware decode frame
+
+    AVPacket *ipkt;  // internal packet
+    uint8_t *picswbuf;//
+
+    SAVEDVideoScaleCtx *videoScaleCtx;
 
 }SAVEDDecoderContext;
 

@@ -3,6 +3,7 @@
 #include "encoder.h"
 #include "decoder.h"
 #include "log.h"
+#include "saved.h"
 
 SAVEDInternalContext* saved_internal_alloc() {
     SAVEDInternalContext *ctx = (SAVEDInternalContext*)malloc(sizeof(SAVEDInternalContext));
@@ -101,15 +102,17 @@ int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
         pkt->type = ictx->fmt->allTypes[ipkt->stream_index];
     }
 
+
     return SAVED_OP_OK;
 }
 
 
 int saved_internal_send_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
 
-
+    saved_codec_send_pkt((SAVEDCodecContext *) ictx->savctx, pkt);
     return SAVED_E_UNDEFINE;
 }
+
 
 int saved_internal_get_frame(SAVEDInternalContext *ictx, SAVEDFrame *f) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
@@ -121,7 +124,9 @@ int saved_internal_get_frame(SAVEDInternalContext *ictx, SAVEDFrame *f) {
         return SAVED_E_FATAL;
     }
 
-    return SAVED_E_UNDEFINE;
+    int ret = saved_codec_get_frame(ictx->savctx,f);
+
+    return ret;
 }
 
 int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f) {
