@@ -17,9 +17,10 @@ void saved_logp(void *ctx, int level,const char *file, const char *func, const c
     int funclen = strlen(func);
     int fmtlen = strlen(fmtstr);
     // "file -> func : " + 4 + 3
-    int totallen = filelen+4 + funclen+3 + fmtlen +1;
+    int totallen = filelen+4 + funclen+3 + fmtlen +2;
     char *fmt = (char*)malloc(totallen);
     memset(fmt,' ',totallen);
+    fmt[totallen-1]='\0';
     memcpy(fmt,file,filelen);
     memcpy(fmt+filelen," -> ", 4);
     memcpy(fmt+filelen+4,func,funclen);
@@ -67,8 +68,6 @@ void saved_logp(void *ctx, int level,const char *file, const char *func, const c
     fmtstr = fmt;
     va_list args;
     va_start(args, fmtstr);
-    int len;
-    len = vsnprintf(str + tstrLen + 4, +MAXLOGSTRLEN - 1, fmt, args);
     va_end(args);
 
     printf("%s\n", str);

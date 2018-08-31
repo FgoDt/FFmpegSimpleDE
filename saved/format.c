@@ -19,6 +19,22 @@ SAVEDFormat* saved_format_alloc() {
     return fmt;
 }
 
+int saved_format_close(SAVEDFormat *fmt){
+    RETIFNULL(fmt) SAVED_E_USE_NULL;
+    if(fmt->fmt){
+        avformat_close_input(&fmt->fmt);
+        avformat_free_context(fmt->fmt);
+        SAVED_SET_NULL(fmt->fmt);
+    }
+    fmt->best_video_index = -1;
+    fmt->best_audio_index = -1;
+    SAVED_SET_NULL(fmt->astream);
+    SAVED_SET_NULL(fmt->vstream);
+    SAVED_SET_NULL(fmt->sstream);
+    free(fmt);
+    return  SAVED_OP_OK;
+}
+
 
 int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *options) {
     RETIFNULL(ctx) SAVED_E_USE_NULL;

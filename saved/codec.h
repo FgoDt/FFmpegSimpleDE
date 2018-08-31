@@ -49,6 +49,8 @@ SAVEDCodecContext* saved_codec_alloc();
 
 int saved_codec_open(SAVEDCodecContext *savctx, SAVEDFormat *fmt);
 
+int saved_codec_close(SAVEDCodecContext *savctx);
+
 
 int saved_codec_send_pkt(SAVEDCodecContext *ictx, SAVEDPkt *pkt);
 int saved_codec_get_pkt(SAVEDCodecContext *ictx, SAVEDPkt *pkt);

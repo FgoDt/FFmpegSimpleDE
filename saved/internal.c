@@ -12,10 +12,23 @@ SAVEDInternalContext* saved_internal_alloc() {
         SAVLOGE("no mem");
         return NULL;
     }
-    ctx->fmt = NULL;
     ctx->savctx = NULL;
     ctx->isencoder = 0;
     return ctx;
+}
+
+int saved_internal_close(SAVEDInternalContext *ictx){
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    int ret = SAVED_OP_OK;
+    if(ictx->fmt!=NULL){
+        ret |= saved_format_close(ictx->fmt);
+        SAVED_SET_NULL(ictx->fmt);
+    }
+    if(ictx->savctx) {
+        ret |= saved_codec_close(ictx->savctx);
+    }
+    free(ictx);
+    return  ret;
 }
 
 static int open_encoder() {
@@ -47,6 +60,8 @@ void saved_copy_pkt_dsc(SAVEDPkt *pkt) {
 
 int saved_internal_open(SAVEDInternalContext *ictx,const char* path, const char *options) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
+
+    ictx->fmt = saved_format_alloc();
 
     int ret = 0;
     if (ictx->isencoder&&path!=NULL)
@@ -83,7 +98,6 @@ int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
     RETIFNULL(pkt) SAVED_E_USE_NULL;
 
-    pkt->internalPkt = av_packet_alloc();
     int ret = SAVED_E_UNDEFINE;
 
     if (ictx->isencoder)

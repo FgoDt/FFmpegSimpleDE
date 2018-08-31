@@ -32,6 +32,7 @@ SAVEDInternalContext* saved_internal_alloc();
  **/
 int saved_internal_open(SAVEDInternalContext *ictx, const char* path, const char *options);
 
+int saved_internal_close(SAVEDInternalContext *ictx);
 
 int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt);
 

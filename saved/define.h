@@ -28,6 +28,8 @@
 #define RETIFCTXNULL(x) if(SAVEDCTXISNULL(x)) return
 #define RETIFNULL(x) if((x) == NULL) return
 
+#define SAVED_SET_NULL(x) ((x) = NULL)
+
 #define SAVED_E_
 #define SAVED_OP_OK 0
 #define SAVED_E_AVLIB_ERROR -1

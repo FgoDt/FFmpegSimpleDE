@@ -69,7 +69,8 @@ int saved_hw_decoder_init(SAVEDDecoderContext *ctx, const enum AVHWDeviceType ty
 
 
 SAVEDDecoderContext* saved_decoder_alloc() {
-    SAVEDDecoderContext *savctx = (SAVEDDecoderContext*)av_mallocz(sizeof(SAVEDDecoderContext));
+    SAVEDDecoderContext *savctx = (SAVEDDecoderContext*)malloc(sizeof(SAVEDDecoderContext));
+    memset(savctx,0,sizeof(SAVEDDecoderContext));
     if (savctx==NULL)
     {
         SAVLOGE("no mem");
@@ -79,6 +80,47 @@ SAVEDDecoderContext* saved_decoder_alloc() {
     savctx->isrc_frame = av_frame_alloc();
     savctx->idst_frame = av_frame_alloc();
     return savctx;
+}
+int saved_decoder_close(SAVEDDecoderContext *ictx){
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    if(ictx->ipkt) {
+        av_packet_unref(ictx->ipkt);
+        av_packet_free(&ictx->ipkt);
+    }
+    if(ictx->isrc_frame)
+        av_frame_free(&ictx->isrc_frame);
+    if(ictx->idst_frame)
+        av_frame_free(&ictx->idst_frame);
+    if(ictx->videoScaleCtx){
+        saved_video_scale_close(ictx->videoScaleCtx);
+    }
+    if(ictx->picswbuf){
+        free(ictx->picswbuf);
+    }
+    if(ictx->vctx){
+        avcodec_close(ictx->vctx);
+        avcodec_free_context(&ictx->vctx);
+    }
+    if(ictx->actx){
+        avcodec_close(ictx->actx);
+        avcodec_free_context(&ictx->actx);
+    }
+    if(ictx->sctx){
+        avcodec_close(ictx->sctx);
+        avcodec_free_context(&ictx->sctx);
+    }
+    if(ictx->hw_bufferref){
+        av_buffer_unref(&ictx->hw_bufferref);
+    }
+    if(ictx->ihw_frame){
+        av_frame_free(&ictx->ihw_frame);
+        ictx->ihw_frame = NULL;
+    }
+    if(ictx->hw_name){
+        free(ictx->hw_name);
+        ictx->hw_name = NULL;
+    }
+    free(ictx);
 }
 
 int saved_decoder_init(SAVEDDecoderContext *ictx, SAVEDFormat *fmt, char *hwname){
@@ -95,10 +137,10 @@ static  int set_video_scale(SAVEDDecoderContext *ctx){
     int ret = saved_video_scale_open(ctx->videoScaleCtx);
 
     ctx->picswbuf = (uint8_t*)malloc(av_image_get_buffer_size(ctx->videoScaleCtx->tgt->fmt,
-            ctx->videoScaleCtx->tgt->height,ctx->videoScaleCtx->tgt->height,1));
+            ctx->videoScaleCtx->tgt->width,ctx->videoScaleCtx->tgt->height,1));
 
     av_image_fill_arrays(ctx->idst_frame->data,ctx->idst_frame->linesize,ctx->picswbuf,ctx->videoScaleCtx->tgt->fmt,
-    ctx->videoScaleCtx->tgt->height,ctx->videoScaleCtx->tgt->width,1);
+    ctx->videoScaleCtx->tgt->width,ctx->videoScaleCtx->tgt->height,1);
 
     return  ret;
 }
@@ -293,7 +335,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
      //todo
      int ret = avcodec_send_packet(ictx->actx,pkt);
      if(ret == AVERROR(EAGAIN)){
-         SAVLOGD("need more data to decode \0");
+         //SAVLOGD("need more data to decode \0");
      }
      return  ret;
 }
@@ -311,7 +353,7 @@ int static saved_decode_video(SAVEDDecoderContext *ictx, AVPacket *pkt) {
     }
     int ret = avcodec_send_packet(ictx->vctx,pkt);
     if(ret == AVERROR(EAGAIN)){
-        SAVLOGD("need more data to decode\n");
+      //  SAVLOGD("need more data to decode\n");
     }
     if(ret == 0){
     }
@@ -359,34 +401,9 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
     }
     ret = avcodec_receive_frame(codecContext,ictx->isrc_frame);
 
-    if(ret == 0 && type == SAVED_MEDIA_TYPE_VIDEO){
+    if(ret == 0 && type == AVMEDIA_TYPE_VIDEO){
         ret = saved_video_scale(ictx->videoScaleCtx,ictx->isrc_frame,ictx->idst_frame);
-        if(ret == 0){
-            av_image_fill_arrays(f->data,f->linesize,ictx->idst_frame->data,ictx->videoScaleCtx->tgt->fmt,
-                                 ictx->videoScaleCtx->tgt->width,ictx->videoScaleCtx->tgt->height,1);
-        }
     }
     return  ret;
 
-}
-
-int saved_decoder_close(SAVEDDecoderContext *ictx) {
-    av_frame_unref(ictx->idst_frame);
-    av_frame_unref(ictx->isrc_frame);
-    av_packet_unref(ictx->ipkt);
-
-    if(ictx->actx){
-        avcodec_close(ictx->actx);
-        ictx->actx = NULL;
-    }
-    if(ictx->vctx){
-        avcodec_close(ictx->vctx);
-        ictx->vctx = NULL;
-    }
-    if(ictx->sctx){
-        avcodec_close(ictx->sctx);
-        ictx->sctx = NULL;
-    }
-
-    return SAVED_E_UNDEFINE;
 }

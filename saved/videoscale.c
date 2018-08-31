@@ -52,8 +52,9 @@ int saved_video_scale(SAVEDVideoScaleCtx *ctx, AVFrame *src, AVFrame *dst){
     RETIFNULL(src) SAVED_E_USE_NULL;
     RETIFNULL(dst) SAVED_E_USE_NULL;
 
-    int ret = sws_scale(ctx->sws,(const uint8_t*)src->data,src->linesize,0,ctx->src->height,
-                        (uint8_t*)dst->data,dst->linesize);
+    int ret = sws_scale(ctx->sws,src->data,
+            src->linesize,0,ctx->src->height,
+            dst->data,dst->linesize);
 
     if(ret<0){
         SAVLOGE("sws scale error");

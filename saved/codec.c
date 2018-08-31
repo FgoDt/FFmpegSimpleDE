@@ -13,6 +13,19 @@ SAVEDCodecContext *saved_codec_alloc(){
     return ctx;
 }
 
+int saved_codec_close(SAVEDCodecContext *savctx){
+    RETIFNULL(savctx) SAVED_E_USE_NULL;
+
+    if (savctx->decoderctx){
+        saved_decoder_close(savctx->decoderctx);
+        savctx->decoderctx = NULL;
+    }
+
+    free(savctx);
+    SAVLOGD("saved codec close");
+    return SAVED_OP_OK;
+}
+
 int saved_codec_open(SAVEDCodecContext *ictx, SAVEDFormat *fmt){
     RETIFNULL(ictx) SAVED_E_USE_NULL;
     RETIFNULL(fmt) SAVED_E_USE_NULL;
@@ -100,13 +113,16 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
     else
     {
         ret = saved_decoder_recive_frame(ictx->decoderctx,f->internalframe,f->type);
-        if(ret == SAVED_OP_OK){
-            AVFrame *iframe = (AVFrame*) f->internalframe;
+        if(ret == SAVED_OP_OK && f->type == SAVED_MEDIA_TYPE_VIDEO){
+            AVFrame *iframe = ictx->decoderctx->isrc_frame;
+            int yuvsize = ictx->decoderctx->videoScaleCtx->tgt->width * ictx->decoderctx->videoScaleCtx->tgt->height * 1.5;
+           // memcpy(iframe->extended_data,ictx->decoderctx->idst_frame->extended_data,yuvsize);
+
             if(f->data == NULL){
-                f->data = malloc(iframe->linesize[0]*1.5);
+                //f->data = malloc(yuvsize);
             }
-            memcpy(f->data,iframe->extended_data,iframe->linesize[0]*1.5);
-            f->size = iframe->linesize[0]*1.5;
+            //memcpy(f->data,ictx->decoderctx->idst_frame->extended_data,yuvsize);
+        //    f->size = yuvsize;
         }
     }
 

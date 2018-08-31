@@ -36,18 +36,14 @@ int saved_open(SAVEDContext *ctx, const char *path, const char *options, int ise
 
     ctx->ictx = saved_internal_alloc();
 
-    SAVEDInternalContext *ictx = ctx->ictx;
-    ictx->fmt = saved_format_alloc();
-    RETIFNULL(ictx->fmt) SAVED_E_USE_NULL;
 
-    ictx->isencoder = isencoder;
-     
+
     if (path == NULL && !isencoder)
     {
         SAVLOGE("there is no path for decoder use");
         return SAVED_E_USE_NULL;
     }
-    int ret =  saved_internal_open(ictx, path, options);
+    int ret =  saved_internal_open(ctx->ictx, path, options);
     if (ret != SAVED_OP_OK)
     {
         return ret;
@@ -61,7 +57,7 @@ SAVEDPkt* saved_create_pkt() {
     SAVEDPkt *pkt = (SAVEDPkt*)malloc(sizeof(SAVEDPkt));
     pkt->data = NULL;
     pkt->duration = -1;
-    pkt->internalPkt = NULL;
+    pkt->internalPkt = av_packet_alloc();
     pkt->pts = -1;
     pkt->size = -1;
     pkt->type = AVMEDIA_TYPE_UNKNOWN;
@@ -69,6 +65,13 @@ SAVEDPkt* saved_create_pkt() {
     return pkt;
 }
 
+int saved_pkt_unref(SAVEDPkt *pkt){
+    RETIFNULL(pkt) SAVED_E_USE_NULL;
+    if(pkt->internalPkt != NULL){
+        av_packet_unref(pkt->internalPkt);
+    }
+    return SAVED_OP_OK;
+}
 
 int saved_del_pkt(SAVEDPkt *pkt) {
     RETIFNULL(pkt) SAVED_E_USE_NULL;
@@ -80,7 +83,9 @@ int saved_del_pkt(SAVEDPkt *pkt) {
     if (pkt->internalPkt)
     {
         av_packet_unref(pkt->internalPkt);
+        av_packet_free((AVPacket**)&pkt->internalPkt);
     }
+    free(pkt);
     return  SAVED_OP_OK;
 }
 
@@ -96,15 +101,25 @@ SAVEDFrame* saved_create_frame() {
     return f;
 }
 
-int saved_del_frame(SAVEDFrame *pkt) {
-    RETIFNULL(pkt) SAVED_E_USE_NULL;
-    if (pkt->data)
+int saved_frame_unref(SAVEDFrame *savedFrame){
+    RETIFNULL(savedFrame) SAVED_E_USE_NULL;
+    if(savedFrame->internalframe!=NULL){
+        av_frame_unref(savedFrame->internalframe);
+    }
+    return  SAVED_OP_OK;
+}
+
+int saved_del_frame(SAVEDFrame *savedFrame) {
+    RETIFNULL(savedFrame) SAVED_E_USE_NULL;
+    if (savedFrame->data)
     {
-        free(pkt->data);
+        free(savedFrame->data);
     }
-    if (pkt->internalframe) {
-        free(pkt->internalframe);
+    if (savedFrame->internalframe) {
+        av_frame_unref(savedFrame->internalframe);
+        av_frame_free((AVFrame **)&savedFrame->internalframe);
     }
+    free(savedFrame);
     return SAVED_OP_OK;
 }
 
@@ -164,6 +179,13 @@ int saved_get_pkt_raw(SAVEDContext *ctx, unsigned char * data, int size) {
     return ret;
 }
 
+int saved_close(SAVEDContext *ctx){
+    RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
+
+    saved_internal_close(ctx->ictx);
+    free(ctx);
+    return  SAVED_OP_OK;
+}
 
 
 #else
