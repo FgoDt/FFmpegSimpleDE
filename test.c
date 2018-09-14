@@ -1,10 +1,19 @@
 #include "saved/saved.h"
 
 
-int main() {
+int main(int argc,char **argv) {
+
+    char *url = NULL;
+    if (argc == 2)
+    {
+        url = argv[1];
+    } else{
+        url = "/home/fftest/t.flv";
+    }
+
 
     SAVEDContext *ctx = saved_create_context();
-    saved_open(ctx, "/home/fftest/t.flv", NULL, 0);
+    saved_open(ctx, url, NULL, 0);
     SAVEDPkt *pkt = saved_create_pkt();
     SAVEDFrame *f = saved_create_frame();
     SAVEDFrame *af = saved_create_frame();
@@ -17,20 +26,19 @@ int main() {
     int count = 0;
     while (1) {
         count++;
-        if(saved_get_pkt(ctx, pkt)<0)
+
+        if(saved_get_pkt(ctx, pkt)<0) {
+            saved_pkt_unref(pkt);
             break;
+        }
         if(pkt->type == SAVED_MEDIA_TYPE_VIDEO)
               saved_send_pkt(ctx, pkt);
         flag =  saved_get_frame(ctx, f);
         //saved_get_frame(ctx,af);
-               printf("decode %d\n",count);
-        if(count == 871){
-            printf("jjjjj");
-        }
         saved_pkt_unref(pkt);
         if(flag == 0){
-            //fwrite(f->data,1,f->size,yuvtest);
-          //  printf("get yuv");
+            fwrite(f->data,1,f->size,yuvtest);
+            printf("get yuv");
         }
     }
 //    saved_get_pkt(ctx,pkt);

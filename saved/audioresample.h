@@ -21,11 +21,11 @@ typedef struct SAVEDAudioResampleCtx{
 
 SAVEDAudioResampleCtx* saved_resmaple_alloc();
 
-int saved_resmaple_create(SAVEDAudioResampleCtx* ctx,AVStream *instream );
+int saved_resample_create(SAVEDAudioResampleCtx* ctx,AVStream *instream );
 
-int saved_reample_set_output_fmt(SAVEDAudioResampleCtx *ctx,enum AVSampleFormat fmt, int ch ,int samplerate );
+int saved_resample_set_fmtpar(SAVEDAudioPar *par,enum AVSampleFormat fmt, int ch ,int samplerate );
 
-void saved_reample_close(SAVEDAudioResampleCtx* ctx);
+void saved_resample_close(SAVEDAudioResampleCtx* ctx);
 
 
 

@@ -13,7 +13,7 @@ add_library (saved  saved.c
                     decoder.c
                     encoder.c
                     format.c
-        audioresample.c audioresample.h videoscale.c videoscale.h)
+        audioresample.c audioresample.h videoscale.c videoscale.h videofilter.c videofilter.h)
 
 
 # TODO: 如有需要，请添加测试并安装目标。

@@ -114,15 +114,21 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
     {
         ret = saved_decoder_recive_frame(ictx->decoderctx,f->internalframe,f->type);
         if(ret == SAVED_OP_OK && f->type == SAVED_MEDIA_TYPE_VIDEO){
-            AVFrame *iframe = ictx->decoderctx->isrc_frame;
             int yuvsize = ictx->decoderctx->videoScaleCtx->tgt->width * ictx->decoderctx->videoScaleCtx->tgt->height * 1.5;
-           // memcpy(iframe->extended_data,ictx->decoderctx->idst_frame->extended_data,yuvsize);
 
             if(f->data == NULL){
-                //f->data = malloc(yuvsize);
+                f->data = malloc(yuvsize);
             }
-            //memcpy(f->data,ictx->decoderctx->idst_frame->extended_data,yuvsize);
-        //    f->size = yuvsize;
+            int ysize = yuvsize/1.5;
+            memcpy(f->data,ictx->decoderctx->idst_frame->data[0],ysize);
+            memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],ysize/4);
+            memcpy(f->data+(int)(ysize*1.25),ictx->decoderctx->idst_frame->data[2],ysize/4);
+            f->size = yuvsize;
+
+        }
+
+        if(ret == SAVED_OP_OK && f->type == SAVED_MEDIA_TYPE_AUDIO){
+
         }
     }
 

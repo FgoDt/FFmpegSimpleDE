@@ -70,6 +70,8 @@ void saved_logp(void *ctx, int level,const char *file, const char *func, const c
     va_start(args, fmtstr);
     va_end(args);
 
+    vsnprintf(str + tstrLen + 4, +MAXLOGSTRLEN - 1, fmt, args);
+
     printf("%s\n", str);
 
 #ifdef WIN32

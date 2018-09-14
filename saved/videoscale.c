@@ -35,6 +35,8 @@ int saved_video_scale_open(SAVEDVideoScaleCtx *ctx){
     RETIFNULL(ctx->tgt) SAVED_E_USE_NULL;
     RETIFNULL(ctx->src) SAVED_E_USE_NULL;
 
+    ctx->tgt->width /=2;
+    ctx->tgt->height/=2;
     ctx->sws = sws_getContext(ctx->src->width,ctx->src->height,ctx->src->fmt,
             ctx->tgt->width,ctx->tgt->height,ctx->tgt->fmt,SWS_POINT,NULL,NULL,NULL);
 
