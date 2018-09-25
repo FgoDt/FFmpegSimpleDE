@@ -18,6 +18,7 @@ typedef struct SAVEDVideoScaleCtx{
     SAVEDPicPar *tgt;
     SAVEDPicPar *src;
     struct SwsContext *sws;
+    int usehw;
 }SAVEDVideoScaleCtx;
 
 SAVEDVideoScaleCtx* saved_video_scale_alloc();

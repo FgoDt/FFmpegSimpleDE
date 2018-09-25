@@ -3,8 +3,13 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-include_directories("/home/fftest/FFmpeg/fflibs/linux64/include")
-link_directories("/home/fftest/FFmpeg/fflibs/linux64/lib")
+IF(UNIX)
+    include_directories("/home/fftest/FFmpeg/fflibs/linux64/include")
+    link_directories("/home/fftest/FFmpeg/fflibs/linux64/lib")
+ELSEIF(WIN32)
+    include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\include")
+    link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
+ENDIF()
 
 add_definitions("-Wall -g")
 
@@ -27,6 +32,6 @@ target_link_libraries(
     swresample
     avutil
 
-    m 
-    pthread
+  #  m 
+  #  pthread
 )

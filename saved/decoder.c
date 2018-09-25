@@ -60,7 +60,7 @@ int saved_hw_decoder_init(SAVEDDecoderContext *ctx, const enum AVHWDeviceType ty
         return SAVED_OP_OK;
     }
 
-    av_buffer_ref(ctx->hw_bufferref);
+    ctx->vctx->hw_device_ctx = av_buffer_ref(ctx->hw_bufferref);
 
     return SAVED_OP_OK;
 
@@ -142,6 +142,7 @@ static  int set_video_scale(SAVEDDecoderContext *ctx){
     saved_video_scale_set_picpar(ctx->videoScaleCtx->src,ctx->vctx->pix_fmt,ctx->vctx->height,ctx->vctx->width);
     if(ctx->use_hw){
         saved_video_scale_set_picpar(ctx->videoScaleCtx->src,AV_PIX_FMT_NV12,ctx->vctx->height,ctx->vctx->width);
+        ctx->videoScaleCtx->usehw = ctx->use_hw;
     }
     //default output pix format yuv420p
     saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height,ctx->vctx->width);
@@ -300,7 +301,8 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
             set_hw_name_done:
 
-            savctx->hw_name = hwname;
+            savctx->hw_name =(char*)malloc(strlen(hwname)+1);
+            memcpy(savctx->hw_name, hwname, strlen(hwname));
 
             hwdevice = av_hwdevice_find_type_by_name(hwname);
 

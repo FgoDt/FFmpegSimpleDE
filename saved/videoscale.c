@@ -4,6 +4,7 @@
 
 #include "videoscale.h"
 #include "define.h"
+#include <libavutil/hwcontext.h>
 
 
 SAVEDVideoScaleCtx* saved_video_scale_alloc(){
@@ -54,9 +55,26 @@ int saved_video_scale(SAVEDVideoScaleCtx *ctx, AVFrame *src, AVFrame *dst){
     RETIFNULL(src) SAVED_E_USE_NULL;
     RETIFNULL(dst) SAVED_E_USE_NULL;
 
-    int ret = sws_scale(ctx->sws,src->data,
-            src->linesize,0,ctx->src->height,
-            dst->data,dst->linesize);
+    int ret = SAVED_E_UNDEFINE;
+    if (!ctx->usehw) {
+        ret = sws_scale(ctx->sws, src->data,
+            src->linesize, 0, ctx->src->height,
+            dst->data, dst->linesize);
+    }
+    else
+    {
+        AVFrame *tmp = av_frame_alloc();
+        ret = av_hwframe_transfer_data(tmp, src, 0);
+        if (ret < 0) {
+            SAVLOGE("hw transfer data error");
+            return ret;
+        }
+
+        sws_scale(ctx->sws, tmp->data, tmp->linesize, 0, tmp->height,
+            dst->data, dst->linesize);
+        av_frame_unref(tmp);
+        av_frame_free(&tmp);
+    }
 
     if(ret<0){
         SAVLOGE("sws scale error");

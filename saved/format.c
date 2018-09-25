@@ -40,6 +40,9 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     RETIFNULL(ctx) SAVED_E_USE_NULL;
 
 
+        av_register_all();
+        avformat_network_init();
+
     ctx->fmt = avformat_alloc_context();
 
     RETIFNULL(path) SAVED_E_USE_NULL;

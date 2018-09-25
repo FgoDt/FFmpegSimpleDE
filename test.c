@@ -8,7 +8,7 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fftest/sp.mkv";
+        url = "F:\\sp.mkv";
     }
 
 
@@ -22,7 +22,7 @@ int main(int argc,char **argv) {
 
     int flag = -1;
     FILE *yuvtest;
-    yuvtest = fopen("/home/fftest/abc.yuv","wb");
+    yuvtest = fopen("f://abc.yuv","wb");
     int count = 0;
     while (1) {
         count++;
