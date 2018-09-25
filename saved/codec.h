@@ -7,6 +7,7 @@
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 #include "videoscale.h"
+#include "audioresample.h"
 
 
 
@@ -26,7 +27,10 @@ typedef struct SAVEDDecoderContext {
     AVPacket *ipkt;  // internal packet
     uint8_t *picswbuf;//
 
+    uint8_t *audiobuf;
+
     SAVEDVideoScaleCtx *videoScaleCtx;
+    SAVEDAudioResampleCtx *audioResampleCtx;
 
 }SAVEDDecoderContext;
 

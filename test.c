@@ -8,7 +8,7 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fftest/t.flv";
+        url = "/home/fftest/sp.mkv";
     }
 
 
@@ -31,14 +31,14 @@ int main(int argc,char **argv) {
             saved_pkt_unref(pkt);
             break;
         }
-        if(pkt->type == SAVED_MEDIA_TYPE_VIDEO)
+       // if(pkt->type == SAVED_MEDIA_TYPE_VIDEO)
               saved_send_pkt(ctx, pkt);
         flag =  saved_get_frame(ctx, f);
-        //saved_get_frame(ctx,af);
+        saved_get_frame(ctx,af);
         saved_pkt_unref(pkt);
         if(flag == 0){
-            fwrite(f->data,1,f->size,yuvtest);
-            printf("get yuv");
+            //fwrite(f->data,1,f->size,yuvtest);
+           // printf("get yuv");
         }
     }
 //    saved_get_pkt(ctx,pkt);

@@ -81,16 +81,16 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     {
         SAVLOGW("no audio in media");
     } else{
+        ctx->astream = ctx->fmt->streams[ctx->best_audio_index];
         SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"find audio at index : %d",ctx->best_audio_index);
     }
     if (ctx->best_video_index <0)
     {
         SAVLOGW("no video in media");
     }else{
+        ctx->vstream = ctx->fmt->streams[ctx->best_video_index];
         SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"find video at index : %d",ctx->best_video_index);
     }
-    ctx->astream = ctx->fmt->streams[ctx->best_audio_index];
-    ctx->vstream = ctx->fmt->streams[ctx->best_video_index];
 
     if (ctx->best_video_index < 0 && ctx->best_audio_index < 0) {
         return SAVED_E_NO_MEDIAFILE;

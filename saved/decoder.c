@@ -94,8 +94,14 @@ int saved_decoder_close(SAVEDDecoderContext *ictx){
     if(ictx->videoScaleCtx){
         saved_video_scale_close(ictx->videoScaleCtx);
     }
+    if(ictx->audioResampleCtx){
+        saved_resample_close(ictx->audioResampleCtx);
+    }
     if(ictx->picswbuf){
         free(ictx->picswbuf);
+    }
+    if(ictx->audiobuf){
+        free(ictx->audiobuf);
     }
     if(ictx->vctx){
         avcodec_close(ictx->vctx);
@@ -128,10 +134,15 @@ int saved_decoder_init(SAVEDDecoderContext *ictx, SAVEDFormat *fmt, char *hwname
 }
 
 static  int set_video_scale(SAVEDDecoderContext *ctx){
+    RETIFNULL(ctx)SAVED_E_USE_NULL;
+    RETIFNULL(ctx->vctx) SAVED_E_USE_NULL;
     ctx->videoScaleCtx = saved_video_scale_alloc();
-    RETIFNULL(ctx->videoScaleCtx) SAVED_E_USE_NULL;
+    RETIFNULL(ctx->videoScaleCtx) SAVED_E_NO_MEM;
 
     saved_video_scale_set_picpar(ctx->videoScaleCtx->src,ctx->vctx->pix_fmt,ctx->vctx->height,ctx->vctx->width);
+    if(ctx->use_hw){
+        saved_video_scale_set_picpar(ctx->videoScaleCtx->src,AV_PIX_FMT_NV12,ctx->vctx->height,ctx->vctx->width);
+    }
     //default output pix format yuv420p
     saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height,ctx->vctx->width);
     int ret = saved_video_scale_open(ctx->videoScaleCtx);
@@ -145,6 +156,30 @@ static  int set_video_scale(SAVEDDecoderContext *ctx){
     return  ret;
 }
 
+static  int set_audio_resample(SAVEDDecoderContext *ctx){
+    RETIFNULL(ctx) SAVED_E_USE_NULL;
+    RETIFNULL(ctx->actx) SAVED_E_USE_NULL;
+
+    ctx->audioResampleCtx = saved_resample_alloc();
+    RETIFNULL(ctx->audioResampleCtx) SAVED_E_NO_MEM;
+
+   int ret =  saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_FLT,ctx->actx->channels,ctx->actx->sample_rate);
+
+   ret |= saved_resample_set_fmtpar(ctx->audioResampleCtx->src,ctx->actx->sample_fmt,ctx->actx->channels,ctx->actx->sample_rate);
+
+   ret |= saved_resample_open(ctx->audioResampleCtx);
+
+   if(ret!=SAVED_OP_OK)
+       return ret;
+
+   ctx->audiobuf = (uint8_t*)malloc(10240*10*10);
+   RETIFNULL(ctx->audiobuf) SAVED_E_NO_MEM;
+
+   return SAVED_OP_OK;
+
+
+}
+
 int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audiostream, AVStream *videostream, AVStream *substream) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
 
@@ -155,39 +190,35 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
     AVCodec *vcodec = NULL;
 
     //create audio deocer
-    if (astream)
-    {
+    if (astream) {
         savctx->actx = avcodec_alloc_context3(NULL);
         if ((avcodec_parameters_to_context(savctx->actx, astream->codecpar)) < 0) {
             SAVLOGE("can't parse par to context");
             return SAVED_E_AVLIB_ERROR;
         }
         acodec = avcodec_find_decoder(savctx->actx->codec_id);
-        if (acodec == NULL)
-        {
+        if (acodec == NULL) {
             SAVLOGE("can't find decoder for audio ");
             return SAVED_E_AVLIB_ERROR;
         }
-        SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"find audio default decoder: %s", acodec->name);
-        
+        SAVEDLOG1(NULL, SAVEDLOG_LEVEL_D, "find audio default decoder: %s", acodec->name);
+
     }
 
     //create video decoder
-    if (vstream)
-    {
+    if (vstream) {
         savctx->vctx = avcodec_alloc_context3(NULL);
         if ((avcodec_parameters_to_context(savctx->vctx, vstream->codecpar)) < 0) {
             SAVLOGE("can't parse par to context");
             return SAVED_E_AVLIB_ERROR;
         }
         vcodec = avcodec_find_decoder(savctx->vctx->codec_id);
-        if (vcodec == NULL)
-        {
+        if (vcodec == NULL) {
             SAVLOGE("can't find decoder for video");
 
             return SAVED_E_AVLIB_ERROR;
         }
-        SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"find video default decoder: %s", vcodec->name);
+        SAVEDLOG1(NULL, SAVEDLOG_LEVEL_D, "find video default decoder: %s", vcodec->name);
 
 #if __ANDROID_NDK__
 
@@ -236,29 +267,34 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 #endif
 
 
+        //test code
+        savctx->use_hw = 1;
+        //end test
+
         //use hardware
-        if (savctx->use_hw)
-        {
+        if (savctx->use_hw) {
             enum AVHWDeviceType hwdevice;
             hwdevice = AV_HWDEVICE_TYPE_NONE;
 
             char *hwname = NULL;
-            
-            if (chwname!=NULL)
-            {
+
+            if (chwname != NULL) {
                 hwname = chwname;
                 goto set_hw_name_done;
             }
 
-#if _WIN32||_WIN64
+#if _WIN32 || _WIN64
             hwname = "dxva2";
 #endif // _WIN32||_WIN64
 
 #if TARGET_OS_IPHONE
             hwname = "videotoolbox";
-#endif  
-            if (hwname == NULL)
-            {
+#endif
+
+#if defined(linux)
+            hwname = "vaapi";
+#endif
+            if (hwname == NULL) {
                 goto skip_hw;
             }
 
@@ -268,16 +304,14 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
             hwdevice = av_hwdevice_find_type_by_name(hwname);
 
-            if (hwdevice == AV_HWDEVICE_TYPE_NONE)
-            {
+            if (hwdevice == AV_HWDEVICE_TYPE_NONE) {
                 SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hwdevice by name :%s", hwname);
                 goto skip_hw;
             }
 
             enum AVPixelFormat hwpixfmt = saved_find_fmt_by_hw_type(hwdevice);
 
-            if (hwpixfmt == -1)
-            {
+            if (hwpixfmt == -1) {
                 SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hw fmt by hwname :%s", hwname);
                 goto skip_hw;
             }
@@ -286,38 +320,35 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
             savctx->vctx->pix_fmt = hwpixfmt;
             savctx->vctx->get_format = saved_get_hw_format;
 
-            if (saved_hw_decoder_init(savctx,hwdevice) == SAVED_OP_OK)
-            {
+            if (saved_hw_decoder_init(savctx, hwdevice) == SAVED_OP_OK) {
                 savctx->use_hw = 1;
                 SAVLOGD("init hw decoder done");
-            }
-            else
-            {
+            } else {
                 SAVLOGW("init hw decoder error");
                 av_buffer_unref(&savctx->hw_bufferref);
-                savctx->use_hw= 0;
+                savctx->use_hw = 0;
             }
 
         }
-
-
-        skip_hw:
-
-        if (acodec!=NULL&&0!=avcodec_open2(savctx->actx,acodec,NULL))
-        {
-            SAVLOGE("audio codec open error");
-        }
-
-        if (vcodec!=NULL&&0!=avcodec_open2(savctx->vctx,vcodec,NULL))
-        {
-            SAVLOGE("video codec open error");
-        }
-
 
 
     }
 
-    set_video_scale(ictx);
+    skip_hw:
+
+    if (acodec != NULL && 0 != avcodec_open2(savctx->actx, acodec, NULL)) {
+        SAVLOGE("audio codec open error");
+    }
+
+    if (vcodec != NULL && 0 != avcodec_open2(savctx->vctx, vcodec, NULL)) {
+        SAVLOGE("video codec open error");
+    }
+
+
+    if(vstream)
+        set_video_scale(ictx);
+    if(astream)
+        set_audio_resample(ictx);
 
     return SAVED_OP_OK;
 
@@ -401,9 +432,17 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
     }
     ret = avcodec_receive_frame(codecContext,ictx->isrc_frame);
 
+    //video sws
     if(ret == 0 && type == AVMEDIA_TYPE_VIDEO){
         ret = saved_video_scale(ictx->videoScaleCtx,ictx->isrc_frame,ictx->idst_frame);
     }
+
+    //audio swr
+    if(ret == 0 && type == AVMEDIA_TYPE_AUDIO){
+        ret = saved_resample(ictx->audioResampleCtx,ictx->isrc_frame,ictx->audiobuf);
+    }
+
+
     return  ret;
 
 }
