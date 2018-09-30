@@ -32,6 +32,6 @@ target_link_libraries(
     swresample
     avutil
 
-  #  m 
-  #  pthread
+    m
+    pthread
 )

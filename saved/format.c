@@ -40,6 +40,7 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     RETIFNULL(ctx) SAVED_E_USE_NULL;
 
 
+   AVFORMAT_VERSION_H
         av_register_all();
         avformat_network_init();
 
@@ -52,6 +53,8 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
         SAVLOGE("open input error");
         return SAVED_E_AVLIB_ERROR;
     }
+
+    ctx->fmt->metadata
 
     if (avformat_find_stream_info(ctx->fmt, NULL) < 0) {
         SAVLOGE("can not find stream info");

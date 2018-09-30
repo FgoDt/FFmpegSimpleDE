@@ -128,7 +128,13 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
         }
 
         if(ret == SAVED_OP_OK && f->type == SAVED_MEDIA_TYPE_AUDIO){
-
+            AVFrame *iframe = f->internalframe;
+            f->size = iframe->nb_samples*ictx->decoderctx->audioResampleCtx->tgt->ch
+                    *av_get_bytes_per_sample(ictx->decoderctx->audioResampleCtx->tgt->fmt);
+            if(f->data == NULL){
+                f->data = (unsigned char *) malloc(f->size);
+            }
+            memcpy(f->data,ictx->decoderctx->audiobuf,f->size);
         }
     }
 

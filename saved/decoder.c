@@ -295,6 +295,10 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 #if defined(linux)
             hwname = "vaapi";
 #endif
+            enum AVHWDeviceType  typtmp = av_hwdevice_iterate_types(AV_HWDEVICE_TYPE_NONE);
+            while (typtmp == AV_HWDEVICE_TYPE_NONE){
+                typtmp = av_hwdevice_iterate_types(typtmp);
+            }
             if (hwname == NULL) {
                 goto skip_hw;
             }
@@ -442,6 +446,10 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
     //audio swr
     if(ret == 0 && type == AVMEDIA_TYPE_AUDIO){
         ret = saved_resample(ictx->audioResampleCtx,ictx->isrc_frame,ictx->audiobuf);
+        if(ret>0) {
+            f->nb_samples = ret;
+            ret = SAVED_OP_OK;
+        }
     }
 
 
