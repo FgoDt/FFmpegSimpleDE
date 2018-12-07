@@ -42,4 +42,6 @@ int saved_internal_get_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
 
 int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
 
+int saved_internal_get_metatdata(SAVEDInternalContext *ictx,char *key,char **val);
+
 #endif 

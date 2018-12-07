@@ -131,10 +131,13 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
             AVFrame *iframe = f->internalframe;
             f->size = iframe->nb_samples*ictx->decoderctx->audioResampleCtx->tgt->ch
                     *av_get_bytes_per_sample(ictx->decoderctx->audioResampleCtx->tgt->fmt);
-            if(f->data == NULL){
-                f->data = (unsigned char *) malloc(f->size);
+            if(f->data != NULL){
+                free(f->data);
             }
+                f->data = (unsigned char *) malloc(f->size);
             memcpy(f->data,ictx->decoderctx->audiobuf,f->size);
+            f->pts = ictx->decoderctx->isrc_frame->pts;
+            f->duration = ictx->decoderctx->isrc_frame->pkt_duration;
         }
     }
 

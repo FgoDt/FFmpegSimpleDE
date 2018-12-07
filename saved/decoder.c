@@ -140,9 +140,9 @@ static  int set_video_scale(SAVEDDecoderContext *ctx){
     RETIFNULL(ctx->videoScaleCtx) SAVED_E_NO_MEM;
 
     saved_video_scale_set_picpar(ctx->videoScaleCtx->src,ctx->vctx->pix_fmt,ctx->vctx->height,ctx->vctx->width);
+    ctx->videoScaleCtx->usehw = ctx->use_hw;
     if(ctx->use_hw){
         saved_video_scale_set_picpar(ctx->videoScaleCtx->src,AV_PIX_FMT_NV12,ctx->vctx->height,ctx->vctx->width);
-        ctx->videoScaleCtx->usehw = ctx->use_hw;
     }
     //default output pix format yuv420p
     saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height,ctx->vctx->width);
@@ -295,13 +295,8 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 #if defined(linux)
             hwname = "vaapi";
 #endif
-            enum AVHWDeviceType  typtmp = av_hwdevice_iterate_types(AV_HWDEVICE_TYPE_NONE);
-            while (typtmp == AV_HWDEVICE_TYPE_NONE){
-                typtmp = av_hwdevice_iterate_types(typtmp);
-            }
-            if (hwname == NULL) {
-                goto skip_hw;
-            }
+
+
 
             set_hw_name_done:
 
@@ -312,14 +307,47 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
             if (hwdevice == AV_HWDEVICE_TYPE_NONE) {
                 SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hwdevice by name :%s", hwname);
-                goto skip_hw;
+                goto ERROR_ON_USE_HW;
             }
+
+            enum AVHWDeviceType  typtmp = av_hwdevice_iterate_types(AV_HWDEVICE_TYPE_NONE);
+
+            int nb_hwdevices = 0;
+            do{
+                typtmp = av_hwdevice_iterate_types(typtmp);
+
+                if(typtmp != AV_HWDEVICE_TYPE_NONE){
+                    nb_hwdevices++;
+                }
+
+                if (typtmp == hwdevice){
+                    break;
+                }
+            }while (typtmp != AV_HWDEVICE_TYPE_NONE);
+
+            if (hwname == NULL || nb_hwdevices == 0) {
+                goto ERROR_ON_USE_HW;
+            }
+
+            if(typtmp != hwdevice && nb_hwdevices>0){
+                hwdevice = av_hwdevice_iterate_types(AV_HWDEVICE_TYPE_NONE);
+            }
+            const char* default_hw_name =  av_hwdevice_get_type_name(hwdevice);
+
+            if(savctx->hw_name!=NULL){
+                free(savctx->hw_name);
+            }
+
+            savctx->hw_name =(char*)malloc(strlen(default_hw_name)+1);
+            savctx->hw_name[strlen(default_hw_name)] = 0;
+            memcpy(savctx->hw_name, default_hw_name, strlen(default_hw_name));
+
 
             enum AVPixelFormat hwpixfmt = saved_find_fmt_by_hw_type(hwdevice);
 
             if (hwpixfmt == -1) {
                 SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hw fmt by hwname :%s", hwname);
-                goto skip_hw;
+                goto ERROR_ON_USE_HW;
             }
 
 
@@ -330,8 +358,11 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
                 savctx->use_hw = 1;
                 SAVLOGD("init hw decoder done");
             } else {
+
+                ERROR_ON_USE_HW:
                 SAVLOGW("init hw decoder error");
-                av_buffer_unref(&savctx->hw_bufferref);
+                if(savctx->hw_bufferref != NULL)
+                    av_buffer_unref(&savctx->hw_bufferref);
                 savctx->use_hw = 0;
             }
 

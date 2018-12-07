@@ -3,17 +3,52 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+IF(UNIX)
+    include_directories("/home/fftest/FFmpeg/fflibs/linux64/include")
+    link_directories("/home/fftest/FFmpeg/fflibs/linux64/lib")
+ELSEIF(WIN32)
+    include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\include")
+    link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
+ENDIF()
+
 
 
 # 将源添加到此项目的可执行文件。
-add_library (saved  saved.c
-                    log.c
-                    internal.c
-                    codec.c
-                    decoder.c
-                    encoder.c
-                    format.c
-        audioresample.c audioresample.h videoscale.c videoscale.h videofilter.c videofilter.h)
+add_library (saved
+
+                STATIC
+
+                saved.c
+                log.c
+                internal.c
+                codec.c
+                decoder.c
+                encoder.c
+                format.c
+                audioresample.c
+                videoscale.c
+                videofilter.c)
+
+target_link_libraries(
+
+            saved
+
+
+            --whole-file
+
+            avformat
+            avcodec
+            avfilter
+            swscale
+            swresample
+            avutil
+
+            m
+            pthread
+            z
+
+            --no-whole-file
+)
 
 
 # TODO: 如有需要，请添加测试并安装目标。

@@ -128,6 +128,9 @@ int saved_get_pkt(SAVEDContext *ctx, SAVEDPkt *pkt) {
     RETIFNULL(pkt) SAVED_E_USE_NULL;
 
     int ret =  saved_internal_get_pkt(ctx->ictx, pkt);
+
+
+
     return ret;
 }
 
@@ -186,6 +189,13 @@ int saved_close(SAVEDContext *ctx){
     free(ctx);
     return  SAVED_OP_OK;
 }
+
+int saved_get_metadata(SAVEDContext *ctx, char *key, char **val){
+    RETIFNULL(ctx) SAVED_E_USE_NULL;
+    int ret = saved_internal_get_metatdata(ctx->ictx,key,val);
+    return  ret;
+}
+
 
 
 #else

@@ -153,3 +153,25 @@ int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f) {
 
     return SAVED_E_UNDEFINE;
 }
+
+int saved_internal_get_metatdata(SAVEDInternalContext *ictx,char *key,char **val){
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    RETIFNULL(ictx->fmt) SAVED_E_USE_NULL;
+    RETIFNULL(ictx->fmt->fmt) SAVED_E_USE_NULL;
+    RETIFNULL(key) SAVED_E_USE_NULL;
+    RETIFNULL(val) SAVED_E_USE_NULL;
+
+    AVDictionaryEntry *entry = NULL;
+    entry = av_dict_get(ictx->fmt->fmt->metadata,key,NULL,AV_DICT_IGNORE_SUFFIX);
+
+    if(entry == NULL){
+        return SAVED_E_NO_MEDIAFILE;
+    }
+
+    *val = (char*)malloc(strlen(entry->value)+1);
+    char *tmp = *val;
+    tmp[strlen(entry->value)] = 0;
+    memcpy(*val,entry->value,strlen(entry->value));
+    return  SAVED_OP_OK;
+
+}

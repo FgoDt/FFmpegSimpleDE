@@ -73,9 +73,10 @@ int saved_get_frame_raw(SAVEDContext *ctx,unsigned char **data, int linesize[4])
 
 int saved_get_pkt_raw(SAVEDContext *ctx,unsigned char * data, int size);
 
+int saved_get_metadata(SAVEDContext *ctx, char *key, char **val);
+
 
 int test();
 
-// TODO: 在此处引用程序需要的其他标头。
 
 #endif // __SAVED_H__
