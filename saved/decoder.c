@@ -81,8 +81,8 @@ SAVEDDecoderContext* saved_decoder_alloc() {
     savctx->idst_frame = av_frame_alloc();
     return savctx;
 }
-int saved_decoder_close(SAVEDDecoderContext *ictx){
-    RETIFNULL(ictx) SAVED_E_USE_NULL;
+void saved_decoder_close(SAVEDDecoderContext *ictx){
+    RETIFNULL(ictx);
     if(ictx->ipkt) {
         av_packet_unref(ictx->ipkt);
         av_packet_free(&ictx->ipkt);
@@ -203,6 +203,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
             return SAVED_E_AVLIB_ERROR;
         }
         SAVEDLOG1(NULL, SAVEDLOG_LEVEL_D, "find audio default decoder: %s", acodec->name);
+        savctx->a_time_base = astream->time_base;
 
     }
 
@@ -220,6 +221,8 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
             return SAVED_E_AVLIB_ERROR;
         }
         SAVEDLOG1(NULL, SAVEDLOG_LEVEL_D, "find video default decoder: %s", vcodec->name);
+
+        savctx->v_time_base = vstream->time_base;
 
 #if __ANDROID_NDK__
 
@@ -258,7 +261,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
         if (MCCodec == NULL) {
             SAVLOGW("can't nopen android mediacodec ");
-            goto skip_mc;
+            goto skip_mc;    
         }
 
         vcodec = MCCodec;
@@ -288,11 +291,11 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
             hwname = "dxva2";
 #endif // _WIN32||_WIN64
 
-#if TARGET_OS_IPHONE
+#if defined(TARGET_OS_IPHONE) || defined(TARGET_OS_MAC)
             hwname = "videotoolbox";
 #endif
 
-#if defined(linux)
+#if defined(__linux__)
             hwname = "vaapi";
 #endif
 
@@ -300,15 +303,18 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
             set_hw_name_done:
 
-            savctx->hw_name =(char*)malloc(strlen(hwname)+1);
-            memcpy(savctx->hw_name, hwname, strlen(hwname));
+            if(hwname != NULL){
+               savctx->hw_name =(char*)malloc(strlen(hwname)+1);
+               memcpy(savctx->hw_name, hwname, strlen(hwname));
 
-            hwdevice = av_hwdevice_find_type_by_name(hwname);
+               hwdevice = av_hwdevice_find_type_by_name(hwname);
 
-            if (hwdevice == AV_HWDEVICE_TYPE_NONE) {
-                SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hwdevice by name :%s", hwname);
-                goto ERROR_ON_USE_HW;
+               if (hwdevice == AV_HWDEVICE_TYPE_NONE) {
+                   SAVEDLOG1(NULL, SAVEDLOG_LEVEL_W, "can not find hwdevice by name :%s", hwname);
+                   goto ERROR_ON_USE_HW;
+               }
             }
+
 
             enum AVHWDeviceType  typtmp = av_hwdevice_iterate_types(AV_HWDEVICE_TYPE_NONE);
 
@@ -371,7 +377,6 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
     }
 
-    skip_hw:
 
     if (acodec != NULL && 0 != avcodec_open2(savctx->actx, acodec, NULL)) {
         SAVLOGE("audio codec open error");

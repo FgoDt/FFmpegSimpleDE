@@ -20,6 +20,10 @@ typedef struct SAVEDDecoderContext {
     AVCodecContext *vctx; //video
     AVCodecContext *sctx; //sub
 
+    AVRational a_time_base;
+    AVRational v_time_base;
+    AVRational s_time_base;
+
     AVFrame *idst_frame; // internal swsscale frame
     AVFrame *isrc_frame; // internal avcodec decode frame
     AVFrame *ihw_frame;  // internal hard ware decode frame

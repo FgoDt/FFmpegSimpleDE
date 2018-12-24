@@ -113,6 +113,8 @@ int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
 
         saved_copy_pkt_dsc(pkt);
         AVPacket *ipkt = (AVPacket*)pkt->internalPkt;
+        pkt->pts = av_q2d(ictx->fmt->fmt->streams[ipkt->stream_index]->time_base)*pkt->pts;
+        pkt->duration = av_q2d(ictx->fmt->fmt->streams[ipkt->stream_index]->time_base)*pkt->duration;
         pkt->type = ictx->fmt->allTypes[ipkt->stream_index];
     }
 

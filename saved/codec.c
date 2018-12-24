@@ -117,12 +117,15 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
             int yuvsize = ictx->decoderctx->videoScaleCtx->tgt->width * ictx->decoderctx->videoScaleCtx->tgt->height * 1.5;
 
             if(f->data == NULL){
-                f->data = malloc(yuvsize);
+                f->data = (unsigned char*)malloc(yuvsize);
             }
             int ysize = yuvsize/1.5;
             memcpy(f->data,ictx->decoderctx->idst_frame->data[0],ysize);
             memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],ysize/4);
             memcpy(f->data+(int)(ysize*1.25),ictx->decoderctx->idst_frame->data[2],ysize/4);
+            f->pts = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pts;
+            f->duration = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->idst_frame->pkt_duration;
+
             f->size = yuvsize;
 
         }
@@ -136,8 +139,8 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
             }
                 f->data = (unsigned char *) malloc(f->size);
             memcpy(f->data,ictx->decoderctx->audiobuf,f->size);
-            f->pts = ictx->decoderctx->isrc_frame->pts;
-            f->duration = ictx->decoderctx->isrc_frame->pkt_duration;
+            f->pts =av_q2d(ictx->decoderctx->a_time_base) * ictx->decoderctx->isrc_frame->pts;
+            f->duration = av_q2d(ictx->decoderctx->a_time_base)* ictx->decoderctx->isrc_frame->pkt_duration;
         }
     }
 

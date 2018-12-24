@@ -62,12 +62,13 @@ int main(int argc,char **argv) {
             break;
         }
         count++;
-        printf("GET PKT %d\n",count);
+        printf("GET PKT %d type %d pts %f dur %f\n",count,pkt->type,pkt->pts, pkt ->duration);
        // if(pkt->type == SAVED_MEDIA_TYPE_VIDEO)
               saved_send_pkt(ctx, pkt);
         flag =  saved_get_frame(ctx, f);
         flag =  saved_get_frame(ctx,af);
         saved_pkt_unref(pkt);
+        printf("get audio dur %f pts %f size %d \n",af->duration,af->pts, af->size);
         if(flag == 0){
             //fwrite(f->data,1,f->size,yuvtest);
            // printf("get yuv");
