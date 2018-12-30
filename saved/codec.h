@@ -31,7 +31,7 @@ typedef struct SAVEDDecoderContext {
     AVPacket *ipkt;  // internal packet
     uint8_t *picswbuf;//
 
-    uint8_t *audiobuf;
+    AVFrame *iadst_frame; //audio dst frame;
 
     SAVEDVideoScaleCtx *videoScaleCtx;
     SAVEDAudioResampleCtx *audioResampleCtx;
@@ -43,6 +43,23 @@ typedef struct SAVEDEncoderContext {
     int use_hw;
     char *hw_name;
     AVBufferRef *hw_bufferref;
+
+    AVCodecContext *actx; //audio
+    AVCodecContext *vctx; //video
+    AVCodecContext *sctx; //sub
+
+    AVRational a_time_base;
+    AVRational v_time_base;
+    AVRational s_time_base;
+
+    AVFrame *ivdst_frame; // video scale frame
+    AVFrame *iadst_frame; // audio resample frame
+
+    AVPacket *ipkt;  // internal packet
+
+    SAVEDVideoScaleCtx *videoScaleCtx;
+    SAVEDAudioResampleCtx *audioResampleCtx;
+
 }SAVEDEncoderContext;
 
 
@@ -50,12 +67,16 @@ typedef struct SAVEDEncoderContext {
 typedef struct SAVEDCodecContext{
 
     SAVEDDecoderContext *decoderctx;
+    SAVEDEncoderContext *encoderctx;
     int isencoder;
 }SAVEDCodecContext;
 
 SAVEDCodecContext* saved_codec_alloc();
 
 int saved_codec_open(SAVEDCodecContext *savctx, SAVEDFormat *fmt);
+
+int saved_codec_open_with_par(SAVEDCodecContext *savctx, int vh, int vw, int vfmt,int vbit_rate,
+                                                                                                                                int asample_rate, int afmt, int ach, int abit_rate );
 
 int saved_codec_close(SAVEDCodecContext *savctx);
 

@@ -4,8 +4,8 @@
 cmake_minimum_required (VERSION 3.8)
 
 IF(UNIX)
-    include_directories("/home/fftest/FFmpeg/fflibs/linux64/include")
-    link_directories("/home/fftest/FFmpeg/fflibs/linux64/lib")
+    include_directories("/home/fgodt/workespace/FFmpeg/fflibs/linuxx64/include")
+    link_directories("/home/fgodt/workespace/FFmpeg/fflibs/linuxx64/lib")
 ELSEIF(WIN32)
     include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\include")
     link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
@@ -29,26 +29,4 @@ add_library (saved
                 videoscale.c
                 videofilter.c)
 
-target_link_libraries(
 
-            saved
-
-
-            --whole-file
-
-            avformat
-            avcodec
-            avfilter
-            swscale
-            swresample
-            avutil
-
-            m
-            pthread
-            z
-
-            --no-whole-file
-)
-
-
-# TODO: 如有需要，请添加测试并安装目标。

@@ -37,12 +37,12 @@ int saved_open(SAVEDContext *ctx, const char *path, const char *options, int ise
     ctx->ictx = saved_internal_alloc();
 
 
-
     if (path == NULL && !isencoder)
     {
         SAVLOGE("there is no path for decoder use");
         return SAVED_E_USE_NULL;
     }
+
     int ret =  saved_internal_open(ctx->ictx, path, options);
     if (ret != SAVED_OP_OK)
     {
@@ -52,6 +52,15 @@ int saved_open(SAVEDContext *ctx, const char *path, const char *options, int ise
     return ret;
 }
 
+int saved_open_with_par(SAVEDContext *ctx, const char *path, const char *options, int isencoder, 
+                                                    int vh, int vw, int vfmt, int vbitrate,
+                                                    int asample_rate, int ach, int afmt, int abitrate){
+    ctx->ictx = saved_internal_alloc();
+    SAVEDInternalContext *ictx = ctx->ictx;
+    ictx->isencoder = isencoder;
+    int ret = saved_internal_opne_with_par(ctx->ictx,path,options,vh,vw,vbitrate,ach,asample_rate,abitrate);
+    return ret;
+}
 
 SAVEDPkt* saved_create_pkt() {
     SAVEDPkt *pkt = (SAVEDPkt*)malloc(sizeof(SAVEDPkt));
@@ -155,6 +164,26 @@ int saved_send_frame(SAVEDContext *ctx, SAVEDFrame *f) {
 
     RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(f) SAVED_E_USE_NULL;
+    RETIFNULL(f->internalframe) SAVED_E_USE_NULL;
+
+    AVFrame *iframe = (AVFrame*)f->internalframe;
+    iframe->nb_samples = f->nb_sample;
+    iframe->pts = f->pts;
+    iframe->pkt_duration = f->duration;
+    iframe->format = f->fmt;
+    iframe->channels = f->ch;
+    if(iframe->data[0]== NULL){
+        av_frame_get_buffer(iframe,0);
+        avcodec_fill_audio_frame(iframe,f->ch,f->fmt,f->data,f->size,0);
+    }
+
+
+
+//    if(f->fmt<AV_SAMPLE_FMT_U8P){
+//        iframe->linesize[0]=iframe->channels*iframe->nb_samples*av_get_bytes_per_sample(iframe->format);
+//    } else{
+//        iframe->linesize[0]=iframe->nb_samples*av_get_bytes_per_sample(iframe->format);
+//    }
 
     int ret = saved_internal_send_frame(ctx->ictx, f);
     return ret;

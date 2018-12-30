@@ -28,7 +28,7 @@ int saved_resample_open(SAVEDAudioResampleCtx* ctx);
 
 int saved_resample_set_fmtpar(SAVEDAudioPar *par,enum AVSampleFormat fmt, int ch ,int samplerate );
 
-int saved_resample(SAVEDAudioResampleCtx *ctx, AVFrame *inf, uint8_t *out);
+int saved_resample(SAVEDAudioResampleCtx *ctx, AVFrame *inf, uint8_t **out);
 
 void saved_resample_close(SAVEDAudioResampleCtx* ctx);
 

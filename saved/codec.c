@@ -20,6 +20,10 @@ int saved_codec_close(SAVEDCodecContext *savctx){
         saved_decoder_close(savctx->decoderctx);
         savctx->decoderctx = NULL;
     }
+    if(savctx->encoderctx){
+        saved_encoder_close(savctx->encoderctx);
+        savctx->encoderctx = NULL;
+    }
 
     free(savctx);
     SAVLOGD("saved codec close");
@@ -38,6 +42,18 @@ int saved_codec_open(SAVEDCodecContext *ictx, SAVEDFormat *fmt){
     }
 
     return  SAVED_E_UNDEFINE;
+}
+
+
+int saved_codec_open_with_par(SAVEDCodecContext *savctx, int vh, int vw, int vfmt,int vbit_rate,
+                                                                                                                                int asample_rate, int afmt, int ach, int abit_rate ){
+
+    if(savctx->isencoder){
+        savctx->encoderctx= saved_encoder_alloc();
+        int ret = saved_encoder_open_with_par(savctx->encoderctx,vw,vh,vbit_rate,asample_rate,ach,abit_rate);
+        return ret;
+    }
+    return SAVED_E_FATAL;
 }
 
 
@@ -70,7 +86,7 @@ int saved_codec_get_pkt(SAVEDCodecContext *ictx, SAVEDPkt *pkt) {
 
     if (ictx->isencoder)
     {
-        ret = saved_encoder_recive_pkt(NULL,NULL);
+        ret = saved_encoder_recive_pkt(ictx->encoderctx,pkt);
     }
     else
     {
@@ -89,8 +105,7 @@ int saved_codec_send_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
 
     if (ictx->isencoder)
     {
-        return SAVED_E_UNDEFINE;
-//        ret = saved_encoder_send_frame();
+        saved_encoder_send_frame(ictx->encoderctx,f);
     }
     else
     {
@@ -103,7 +118,7 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
     RETIFNULL(f) SAVED_E_USE_NULL;
 
-    int ret = SAVED_E_UNDEFINE;
+    int ret;
 
     if (ictx->isencoder)
     {
@@ -125,7 +140,7 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
             memcpy(f->data+(int)(ysize*1.25),ictx->decoderctx->idst_frame->data[2],ysize/4);
             f->pts = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pts;
             f->duration = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->idst_frame->pkt_duration;
-
+            f->fmt  = ictx->decoderctx->videoScaleCtx->tgt->fmt;
             f->size = yuvsize;
 
         }
@@ -138,9 +153,12 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
                 free(f->data);
             }
                 f->data = (unsigned char *) malloc(f->size);
-            memcpy(f->data,ictx->decoderctx->audiobuf,f->size);
+            memcpy(f->data,ictx->decoderctx->iadst_frame->extended_data,f->size);
             f->pts =av_q2d(ictx->decoderctx->a_time_base) * ictx->decoderctx->isrc_frame->pts;
             f->duration = av_q2d(ictx->decoderctx->a_time_base)* ictx->decoderctx->isrc_frame->pkt_duration;
+            f->nb_sample = iframe->nb_samples;
+            f->fmt = ictx->decoderctx->audioResampleCtx->tgt->fmt;
+            f->ch = ictx->decoderctx->audioResampleCtx->tgt->ch;
         }
     }
 

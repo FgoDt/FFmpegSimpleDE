@@ -31,9 +31,7 @@ int saved_internal_close(SAVEDInternalContext *ictx){
     return  ret;
 }
 
-static int open_encoder() {
-    return SAVED_E_FATAL;
-}
+
 
 static int open_decoder(SAVEDInternalContext *ictx) {
 
@@ -91,7 +89,17 @@ int saved_internal_open(SAVEDInternalContext *ictx,const char* path, const char 
     return SAVED_E_UNDEFINE;
 }
 
+int saved_internal_opne_with_par(SAVEDInternalContext *ictx, const char *path, const char *options,
+                                                                        int vh, int vw, int vbit_rate, 
+                                                                        int ach, int asample_rate, int abit_rate){
+    if(ictx->isencoder){
+        ictx->savctx = saved_codec_alloc();
+        int ret = saved_codec_open_with_par(ictx->savctx,vh,vw,NULL,vbit_rate,asample_rate,NULL,ach,abit_rate);
+        return ret;
+    }
 
+    return SAVED_E_UNDEFINE;
+}
 
 
 int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
@@ -102,7 +110,6 @@ int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
 
     if (ictx->isencoder)
     {
-        ret = saved_encoder_recive_pkt();
     }
     else
     {
@@ -147,11 +154,13 @@ int saved_internal_get_frame(SAVEDInternalContext *ictx, SAVEDFrame *f) {
 
 int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f) {
 
-    if (ictx->isencoder)
+    if (!ictx->isencoder)
     {
         SAVLOGE("decoder can't use send pkt");
         return SAVED_E_FATAL;
     }
+
+    int ret = saved_codec_send_frame(ictx->savctx,f);
 
     return SAVED_E_UNDEFINE;
 }

@@ -2,32 +2,6 @@
 #include "saved/saved.h"
 
 
-int sub_aac(){
-    FILE *afile = NULL;
-    afile = fopen("/home/fftest/a.aac","rb");
-    FILE *bfile = NULL;
-    bfile = fopen("/home/fftest/b.aac","rb");
-
-    FILE *cfile = NULL;
-    cfile = fopen("/home/fftest/c.aac","wb");
-
-    unsigned  char buf[1024] ={0};
-    int redcount = 0;
-
-    while ((redcount = fread(buf,1,1024,afile))>0){
-        fwrite(buf,1,redcount,cfile);
-    }
-
-    while ((redcount = fread(buf,1,1024,bfile))>0){
-        fwrite(buf,1,redcount,cfile);
-    }
-
-    fclose(afile);
-    fclose(bfile);
-    fclose(cfile);
-
-}
-
 
 int main(int argc,char **argv) {
 
@@ -37,13 +11,19 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fftest/05 - Burning.mp3";
+        url = "/home/fgodt/style.flac";
     }
 
 
     SAVEDContext *ctx = saved_create_context();
+    SAVEDContext *enctx = saved_create_context();
+    saved_open_with_par(enctx,NULL,NULL,1,0,0,0,0,44100,2,-1,-1);
+
+    
+
     saved_open(ctx, url, NULL, 0);
     SAVEDPkt *pkt = saved_create_pkt();
+    SAVEDPkt *enpkt = saved_create_pkt();
     SAVEDFrame *f = saved_create_frame();
     SAVEDFrame *af = saved_create_frame();
     f->type = SAVED_MEDIA_TYPE_VIDEO;
@@ -51,8 +31,6 @@ int main(int argc,char **argv) {
 
 
     int flag = -1;
-    FILE *yuvtest;
-    yuvtest = fopen("/home/fftest/abc.yuv","wb");
     int count = 0;
     while (1) {
 
@@ -70,9 +48,10 @@ int main(int argc,char **argv) {
         saved_pkt_unref(pkt);
         printf("get audio dur %f pts %f size %d \n",af->duration,af->pts, af->size);
         if(flag == 0){
-            //fwrite(f->data,1,f->size,yuvtest);
-           // printf("get yuv");
+            int ret = saved_send_frame(enctx,af);
+            ret = saved_get_pkt(enctx,enpkt);
         }
+        saved_pkt_unref(enpkt);
     }
 //    saved_get_pkt(ctx,pkt);
 //    saved_send_pkt(ctx,pkt);
@@ -87,7 +66,6 @@ int main(int argc,char **argv) {
     saved_del_frame(f);
     saved_del_frame(af);
     saved_close(ctx);
-    fclose(yuvtest);
   //  ctx = saved_create_context();
   //  saved_open(ctx, "/home/fftest/t.flv", NULL, 0);
   //  saved_close(ctx);

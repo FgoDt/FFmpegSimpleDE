@@ -100,9 +100,7 @@ void saved_decoder_close(SAVEDDecoderContext *ictx){
     if(ictx->picswbuf){
         free(ictx->picswbuf);
     }
-    if(ictx->audiobuf){
-        free(ictx->audiobuf);
-    }
+
     if(ictx->vctx){
         avcodec_close(ictx->vctx);
         avcodec_free_context(&ictx->vctx);
@@ -173,8 +171,15 @@ static  int set_audio_resample(SAVEDDecoderContext *ctx){
    if(ret!=SAVED_OP_OK)
        return ret;
 
-   ctx->audiobuf = (uint8_t*)malloc(10240*10*10);
-   RETIFNULL(ctx->audiobuf) SAVED_E_NO_MEM;
+   ctx->iadst_frame = av_frame_alloc();
+   RETIFNULL(ctx->iadst_frame) SAVED_E_USE_NULL;
+
+   ctx->iadst_frame->channels = ctx->audioResampleCtx->tgt->ch;
+   ctx->iadst_frame->channel_layout = ctx->audioResampleCtx->tgt->ch_layout;
+   ctx->iadst_frame->format = ctx->audioResampleCtx->tgt->fmt;
+   ctx->iadst_frame->sample_rate = ctx->audioResampleCtx->tgt->sample;
+   ctx->iadst_frame->nb_samples = 20480+256;
+   av_frame_get_buffer(ctx->iadst_frame,0);
 
    return SAVED_OP_OK;
 
@@ -190,7 +195,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
     AVCodec *acodec = NULL;
     AVCodec *vcodec = NULL;
 
-    //create audio deocer
+    //create audio decoder
     if (astream) {
         savctx->actx = avcodec_alloc_context3(NULL);
         if ((avcodec_parameters_to_context(savctx->actx, astream->codecpar)) < 0) {
@@ -477,16 +482,30 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
     //video sws
     if(ret == 0 && type == AVMEDIA_TYPE_VIDEO){
         ret = saved_video_scale(ictx->videoScaleCtx,ictx->isrc_frame,ictx->idst_frame);
+        SAVEDPicPar *par = ictx->videoScaleCtx->tgt;
+        f->format  = par->fmt;
+        f->width = par->width;
+        f->height = par->height;
     }
 
     //audio swr
     if(ret == 0 && type == AVMEDIA_TYPE_AUDIO){
-        ret = saved_resample(ictx->audioResampleCtx,ictx->isrc_frame,ictx->audiobuf);
+
+        ret = saved_resample(ictx->audioResampleCtx,ictx->isrc_frame,ictx->iadst_frame->data);
         if(ret>0) {
             f->nb_samples = ret;
             ret = SAVED_OP_OK;
+            SAVEDAudioPar *par = ictx->audioResampleCtx->tgt;
+            f->channels = par->ch;
+            f->format = par->fmt;
+            f->sample_rate = par->sample;
+            if(par->fmt<AV_SAMPLE_FMT_U8P)
+                ictx->iadst_frame->linesize[0] = f->nb_samples * av_get_bytes_per_sample(par->fmt)*par->ch;
+            else
+                ictx->iadst_frame->linesize[0] = f->nb_samples * av_get_bytes_per_sample(par->fmt);
         }
     }
+
 
 
     return  ret;

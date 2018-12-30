@@ -26,6 +26,7 @@ typedef struct{
     SAVEDMEDIA_TYPE type;
     unsigned char * data;
     int size;
+
     void *internalPkt;//ffmpeg avpacket
     int useinternal;//1 for use internaldata
 }SAVEDPkt;
@@ -36,6 +37,9 @@ typedef struct{
     SAVEDMEDIA_TYPE type;
     unsigned char * data;//raw data
     int size;
+    int nb_sample;
+    int fmt;
+    int ch;
     void *internalframe;//ffmpeg avframe
     int useinternal;// 1 for use internaldata
 }SAVEDFrame;
@@ -46,6 +50,10 @@ SAVEDContext* saved_create_context();
 int saved_del_context();
 
 int saved_open(SAVEDContext *ctx, const char *path,const char *options, int isencoder );
+
+int saved_open_with_par(SAVEDContext *ctx, const char *path, const char *options, int isencoder, 
+                                                    int vh, int vw, int vfmt, int vbitrate,
+                                                    int asample_rate, int ach, int afmt, int abitrate);
 
 int saved_close(SAVEDContext *ctx);
 
