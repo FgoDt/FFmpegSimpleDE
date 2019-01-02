@@ -10,6 +10,7 @@ SAVEDCodecContext *saved_codec_alloc(){
     RETIFNULL(ctx) NULL;
     ctx->isencoder = -1;
     ctx->decoderctx = NULL;
+    ctx->encoderctx = NULL;
     return ctx;
 }
 
@@ -105,7 +106,7 @@ int saved_codec_send_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
 
     if (ictx->isencoder)
     {
-        saved_encoder_send_frame(ictx->encoderctx,f);
+       ret = saved_encoder_send_frame(ictx->encoderctx,f);
     }
     else
     {
@@ -138,8 +139,9 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
             memcpy(f->data,ictx->decoderctx->idst_frame->data[0],ysize);
             memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],ysize/4);
             memcpy(f->data+(int)(ysize*1.25),ictx->decoderctx->idst_frame->data[2],ysize/4);
+            //printf("video src pts:%ld\n",ictx->decoderctx->isrc_frame->pts);
             f->pts = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pts;
-            f->duration = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->idst_frame->pkt_duration;
+            f->duration = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pkt_duration;
             f->fmt  = ictx->decoderctx->videoScaleCtx->tgt->fmt;
             f->size = yuvsize;
 

@@ -11,23 +11,26 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fgodt/style.flac";
+        url = "/home/fftest/tn.flv";
     }
 
 
     SAVEDContext *ctx = saved_create_context();
     SAVEDContext *enctx = saved_create_context();
-    saved_open_with_par(enctx,NULL,NULL,1,0,0,0,0,44100,2,-1,-1);
-
+   // saved_open_with_par(enctx,NULL,NULL,1,840,480,0,0,44100,2,-1,-1);
+saved_open_with_par(enctx,NULL,NULL,1,480,640,0,0,44100,2,-1,-1);
     
 
     saved_open(ctx, url, NULL, 0);
     SAVEDPkt *pkt = saved_create_pkt();
     SAVEDPkt *enpkt = saved_create_pkt();
+    SAVEDPkt *envpkt = saved_create_pkt();
     SAVEDFrame *f = saved_create_frame();
     SAVEDFrame *af = saved_create_frame();
     f->type = SAVED_MEDIA_TYPE_VIDEO;
     af->type = SAVED_MEDIA_TYPE_AUDIO;
+    enpkt->type = SAVED_MEDIA_TYPE_AUDIO;
+    envpkt->type = SAVED_MEDIA_TYPE_VIDEO;
 
 
     int flag = -1;
@@ -40,16 +43,36 @@ int main(int argc,char **argv) {
             break;
         }
         count++;
-        printf("GET PKT %d type %d pts %f dur %f\n",count,pkt->type,pkt->pts, pkt ->duration);
+      //  printf("GET PKT %d type %d pts %f dur %f\n",count,pkt->type,pkt->pts, pkt ->duration);
        // if(pkt->type == SAVED_MEDIA_TYPE_VIDEO)
               saved_send_pkt(ctx, pkt);
         flag =  saved_get_frame(ctx, f);
+        printf("get frame dur %f pts %f size %d \n",f->duration,f->pts, f->size);
+        if(flag == 0){
+            int ret = 0;
+            ret = saved_send_frame(enctx,f);
+            ret = saved_get_pkt(enctx,envpkt);
+            saved_pkt_unref(envpkt);
+        }
+        continue;
         flag =  saved_get_frame(ctx,af);
         saved_pkt_unref(pkt);
-        printf("get audio dur %f pts %f size %d \n",af->duration,af->pts, af->size);
         if(flag == 0){
-            int ret = saved_send_frame(enctx,af);
-            ret = saved_get_pkt(enctx,enpkt);
+
+            int ret = 0;
+            re_send_frame:
+            ret = saved_send_frame(enctx,af);
+
+            if(ret == -11){
+                ret = 0;
+                while (ret==0) {
+                    printf("in error -11\n");
+                    ret = saved_get_pkt(enctx, enpkt);
+                    saved_pkt_unref(enpkt);
+                }
+                goto re_send_frame;
+            }
+            ret = saved_get_pkt(enctx, enpkt);
         }
         saved_pkt_unref(enpkt);
     }
@@ -63,9 +86,11 @@ int main(int argc,char **argv) {
  //   saved_get_frame(ctx,f);
 
     saved_del_pkt(pkt);
+    saved_del_pkt(enpkt);
     saved_del_frame(f);
     saved_del_frame(af);
     saved_close(ctx);
+    saved_close(enctx);
   //  ctx = saved_create_context();
   //  saved_open(ctx, "/home/fftest/t.flv", NULL, 0);
   //  saved_close(ctx);

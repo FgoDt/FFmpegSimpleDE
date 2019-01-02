@@ -4,8 +4,8 @@
 cmake_minimum_required (VERSION 3.8)
 
 IF(UNIX)
-    include_directories("/home/fgodt/workespace/FFmpeg/fflibs/linuxx64/include")
-    link_directories("/home/fgodt/workespace/FFmpeg/fflibs/linuxx64/lib")
+    include_directories("./Thirdparty/FFmpeg/linux/include")
+    link_directories("./Thirdparty/FFmpeg/linux/lib")
 ELSEIF(WIN32)
     include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\include")
     link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
@@ -35,4 +35,7 @@ target_link_libraries(
     m
     pthread
     x264
+    fdk-aac
+    z
+
 )

@@ -1,6 +1,7 @@
 #include "encoder.h"
 #include "define.h"
 #include "videoscale.h"
+#include "saved.h"
 
 SAVEDEncoderContext * saved_encoder_alloc(){
     SAVEDEncoderContext *ctx = (SAVEDEncoderContext*)malloc(sizeof(SAVEDEncoderContext));
@@ -56,6 +57,7 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
     ctx->vctx->height = vh;
     ctx->vctx->time_base = (AVRational){1,1000};
     ctx->vctx->pix_fmt = AV_PIX_FMT_YUV420P;
+    ctx->vctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     ctx->videoScaleCtx = saved_video_scale_alloc();
     if(ctx->videoScaleCtx == NULL){
@@ -88,7 +90,7 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
         goto done_aencoder;
     }
 
-    AVCodec *acodec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+    AVCodec *acodec = avcodec_find_encoder_by_name("libfdk_aac");
     if(acodec == NULL){
         SAVLOGW("find aac encoder error \n");
         goto done_aencoder;
@@ -103,14 +105,15 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
     ctx->actx->channels = ach;
     ctx->actx->channel_layout = av_get_default_channel_layout(ach);
     ctx->actx->sample_rate = asample_rate;
-    ctx->actx->sample_fmt = AV_SAMPLE_FMT_FLTP;
+    ctx->actx->sample_fmt = AV_SAMPLE_FMT_S16;
     ctx->actx->time_base = (AVRational){1,1000};
+    ctx->actx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     ctx->audioResampleCtx = saved_resample_alloc();
     if(NULL== ctx->audioResampleCtx){
         goto error_aencoder;
     }
 
-    ret = saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_FLTP,ach,asample_rate);
+    ret = saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_S16,ach,asample_rate);
     if (ret <0 ){
         goto error_aencoder;
     }
@@ -141,7 +144,7 @@ static int check_video_scacle(SAVEDEncoderContext *ctx, SAVEDFrame *frame){
     ){
         SAVEDVideoScaleCtx *vsctx = saved_video_scale_alloc();
        int ret =  saved_video_scale_set_picpar(vsctx->tgt,ctx->videoScaleCtx->tgt->fmt,
-                                                                                        ctx->videoScaleCtx->tgt->height,ctx->videoScaleCtx->tgt->width);
+                                                ctx->videoScaleCtx->tgt->height,ctx->videoScaleCtx->tgt->width);
        ret |= saved_video_scale_set_picpar(vsctx->src,f->format,f->height,f->width);
        saved_video_scale_open(vsctx);
        if(ret<0){
@@ -162,9 +165,11 @@ static int check_audio_resampler(SAVEDEncoderContext *ctx, SAVEDFrame *frame){
     ){
         SAVEDAudioResampleCtx *arctx = saved_resample_alloc();
        int ret =  saved_resample_set_fmtpar(arctx->src,f->format,f->channels,f->sample_rate);
+
        ret |= saved_resample_set_fmtpar(arctx->tgt,ctx->audioResampleCtx->tgt->fmt,
-                                                                             ctx->audioResampleCtx->tgt->ch,ctx->audioResampleCtx->tgt->sample);
-        ret |= saved_resample_open(arctx);
+              ctx->audioResampleCtx->tgt->ch,ctx->audioResampleCtx->tgt->sample);
+
+       ret |= saved_resample_open(arctx);
        if(ret<0){
            return SAVED_E_UNDEFINE;
        }
@@ -176,6 +181,15 @@ static int check_audio_resampler(SAVEDEncoderContext *ctx, SAVEDFrame *frame){
 }
 
 
+static  int set_audio_fifo(SAVEDEncoderContext *ctx){
+    RETIFNULL(ctx) SAVED_E_USE_NULL;
+    if(ctx->fifo!=NULL){
+        av_audio_fifo_free(ctx->fifo);
+    }
+    //alloc 10s fifo
+    ctx->fifo = av_audio_fifo_alloc(ctx->audioResampleCtx->tgt->fmt,ctx->audioResampleCtx->tgt->ch,ctx->audioResampleCtx->tgt->sample*10);
+    return SAVED_OP_OK;
+}
 
 int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
     RETIFNULL(ctx) SAVED_E_USE_NULL;
@@ -183,6 +197,9 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
     int ret = 0;
     AVCodecContext *ictx = NULL;
     if(frame->type == SAVED_MEDIA_TYPE_AUDIO){
+        if(ctx->fifo == NULL){
+            set_audio_fifo(ctx);
+        }
         ictx = ctx->actx;
         if(ictx != NULL && frame->internalframe != NULL){
             ret = check_audio_resampler(ctx,frame);
@@ -191,9 +208,10 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
             }
             if(ctx->iadst_frame == NULL){
                 ctx->iadst_frame = av_frame_alloc();
-                ctx->iadst_frame->format = AV_SAMPLE_FMT_FLTP;
+                ctx->iadst_frame->format = ctx->audioResampleCtx->tgt->fmt;
                 ctx->iadst_frame->channels = ctx->audioResampleCtx->tgt->ch;
                 ctx->iadst_frame->sample_rate = ctx->audioResampleCtx->tgt->sample;
+                //dont know how many samples need alloc
                 ctx->iadst_frame->nb_samples = 20480 +256;
                 ctx->iadst_frame->channel_layout= av_get_default_channel_layout(ctx->iadst_frame->channels);
                 av_frame_get_buffer(ctx->iadst_frame,0);
@@ -203,11 +221,41 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
                 SAVLOGE("resample audio error \n");
                 return ret;
             }
-            ctx->iadst_frame->pts = frame->pts;
-            ctx->iadst_frame->pkt_duration = frame->duration;
-            ret = avcodec_send_frame(ictx,ctx->iadst_frame);
-            ictx = NULL;
-            return ret;
+
+            int fifo_full = 0;
+            if(av_audio_fifo_space(ctx->fifo)-av_audio_fifo_size(ctx->fifo)<ret){
+                SAVLOGD("audio fifo full need call read pkt function\n");
+                fifo_full = 1;
+            }
+            if(fifo_full == 0){
+                av_audio_fifo_write(ctx->fifo,ctx->iadst_frame->data,ret);
+            }
+            if(av_audio_fifo_size(ctx->fifo)>1024){
+                AVFrame *enf = ctx->iadst_frame;
+                enf->nb_samples = 1024;
+                enf->channels = ctx->audioResampleCtx->tgt->ch;
+                enf->channel_layout = ctx->audioResampleCtx->tgt->ch_layout;
+                enf->format = ctx->audioResampleCtx->tgt->fmt;
+                enf->sample_rate = ctx->audioResampleCtx->tgt->sample;
+                ret = av_audio_fifo_peek(ctx->fifo,enf->data,1024);
+                if(ret!=1024){
+                    SAVLOGE("not enough pcm data for encode\n");
+                    goto  done_enf;
+                }
+                double one_frame_time = (double)1024/ctx->audioResampleCtx->tgt->sample;
+                enf->pts = ctx->aenpts*1000;
+                enf->pkt_duration =one_frame_time*1000;
+                ret = avcodec_send_frame(ictx,enf);
+                if(ret == 0){
+                    av_audio_fifo_drain(ctx->fifo,1024);
+                    ctx->aenpts += one_frame_time;
+                }
+                done_enf:
+                if(fifo_full== 1){
+                    return  AVERROR(EAGAIN);
+                }
+                return  ret;
+            }
         }
         SAVLOGW("ctx->actx is NULL or frame->internalframe is NULL\n");
         ictx = NULL;
@@ -229,6 +277,8 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
                 av_frame_get_buffer(ctx->ivdst_frame,0);
             }
             ret = saved_video_scale(ctx->videoScaleCtx,frame->internalframe,ctx->ivdst_frame);
+            ctx->ivdst_frame->pts = frame->pts*1000;
+            ctx->ivdst_frame->pkt_duration = frame->duration*1000;
             if(ret<0){
                 SAVLOGE("video scale error \n");
                 return ret;
@@ -263,6 +313,7 @@ if(pkt->type == SAVED_MEDIA_TYPE_VIDEO){
 
 void  saved_encoder_close(SAVEDEncoderContext *ctx){
     if(NULL != ctx->vctx){
+        avcodec_flush_buffers(ctx->vctx);
         avcodec_close(ctx->vctx);
         avcodec_free_context(&ctx->vctx);
         ctx->vctx = NULL;
@@ -300,4 +351,12 @@ void  saved_encoder_close(SAVEDEncoderContext *ctx){
         avcodec_close(ctx->sctx);
         avcodec_free_context(&ctx->sctx);
     }
+    if(NULL!=ctx->fifo){
+        av_audio_fifo_free(ctx->fifo);
+    }
+    if(NULL!=ctx->iadst_frame){
+        av_frame_unref(ctx->iadst_frame);
+        av_frame_free(&ctx->iadst_frame);
+    }
+    free(ctx);
 }

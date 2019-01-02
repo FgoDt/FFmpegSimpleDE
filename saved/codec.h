@@ -8,6 +8,7 @@
 #include <libswscale/swscale.h>
 #include "videoscale.h"
 #include "audioresample.h"
+#include <libavutil/audio_fifo.h>
 
 
 
@@ -59,6 +60,10 @@ typedef struct SAVEDEncoderContext {
 
     SAVEDVideoScaleCtx *videoScaleCtx;
     SAVEDAudioResampleCtx *audioResampleCtx;
+
+    AVAudioFifo *fifo;
+    double aenpts;
+    double venpts;
 
 }SAVEDEncoderContext;
 

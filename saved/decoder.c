@@ -117,8 +117,13 @@ void saved_decoder_close(SAVEDDecoderContext *ictx){
         av_buffer_unref(&ictx->hw_bufferref);
     }
     if(ictx->ihw_frame){
+        av_frame_unref(ictx->ihw_frame);
         av_frame_free(&ictx->ihw_frame);
         ictx->ihw_frame = NULL;
+    }
+    if(ictx->iadst_frame){
+        av_frame_unref(ictx->iadst_frame);
+        av_frame_free(&ictx->iadst_frame);
     }
     if(ictx->hw_name){
         free(ictx->hw_name);
@@ -162,7 +167,7 @@ static  int set_audio_resample(SAVEDDecoderContext *ctx){
     ctx->audioResampleCtx = saved_resample_alloc();
     RETIFNULL(ctx->audioResampleCtx) SAVED_E_NO_MEM;
 
-   int ret =  saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_FLT,ctx->actx->channels,ctx->actx->sample_rate);
+   int ret =  saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_S16,ctx->actx->channels,ctx->actx->sample_rate);
 
    ret |= saved_resample_set_fmtpar(ctx->audioResampleCtx->src,ctx->actx->sample_fmt,ctx->actx->channels,ctx->actx->sample_rate);
 
@@ -171,6 +176,10 @@ static  int set_audio_resample(SAVEDDecoderContext *ctx){
    if(ret!=SAVED_OP_OK)
        return ret;
 
+   if(ctx->iadst_frame) {
+       av_frame_unref(ctx->iadst_frame);
+       av_frame_free(&ctx->iadst_frame);
+   }
    ctx->iadst_frame = av_frame_alloc();
    RETIFNULL(ctx->iadst_frame) SAVED_E_USE_NULL;
 

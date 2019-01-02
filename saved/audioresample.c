@@ -50,7 +50,6 @@ int saved_resample_open(SAVEDAudioResampleCtx* ctx){
             ctx->src->ch_layout,ctx->src->fmt,ctx->src->sample,0,NULL);
 
     int ret = swr_init(ctx->swrContext);
-
     return  ret;
 
 
