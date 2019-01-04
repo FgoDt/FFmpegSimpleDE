@@ -36,10 +36,15 @@ typedef struct{
     double pts;
     SAVEDMEDIA_TYPE type;
     unsigned char * data;//raw data
-    int size;
+    int size;   //raw data size
+                // if fmt is yuv
+                // y size = size/1.5
     int nb_sample;
     int fmt;
     int ch;
+    int width;
+    int height;
+    int linesize[8];
     void *internalframe;//ffmpeg avframe
     int useinternal;// 1 for use internaldata
 }SAVEDFrame;

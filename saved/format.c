@@ -2,6 +2,7 @@
 #include "codec.h"
 #include <libavformat/avformat.h>
 #include "log.h"
+#include "saved.h"
 
 SAVEDFormat* saved_format_alloc() {
     SAVEDFormat* fmt = (SAVEDFormat*)malloc(sizeof(SAVEDFormat));
@@ -22,6 +23,9 @@ SAVEDFormat* saved_format_alloc() {
 int saved_format_close(SAVEDFormat *fmt){
     RETIFNULL(fmt) SAVED_E_USE_NULL;
     if(fmt->fmt){
+        if(fmt->is_write_header){
+            av_write_trailer(fmt->fmt);
+        }
         avformat_close_input(&fmt->fmt);
         avformat_free_context(fmt->fmt);
         SAVED_SET_NULL(fmt->fmt);
@@ -40,11 +44,11 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     RETIFNULL(ctx) SAVED_E_USE_NULL;
 
 
-if(LIBAVFORMAT_VERSION_MAJOR<58)
-{
+#if(LIBAVFORMAT_VERSION_MAJOR<58)
         av_register_all();
-        avformat_network_init();
-}
+#endif
+
+    avformat_network_init();
 
     ctx->fmt = avformat_alloc_context();
 
@@ -106,8 +110,56 @@ if(LIBAVFORMAT_VERSION_MAJOR<58)
 }
 
 
-int saved_format_open_output(SAVEDFormat* ctx, const char *path, const char *options) {
-    return SAVED_E_UNDEFINE;
+int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char *path, const char *options) {
+    RETIFNULL(ctx) SAVED_E_USE_NULL;
+    RETIFNULL(encoderContext) SAVED_E_USE_NULL;
+    RETIFNULL(path) SAVED_E_USE_NULL;
+
+    SAVEDEncoderContext *enctx = (SAVEDEncoderContext*)encoderContext;
+
+#if LIBAVFORMAT_VERSION_MAJOR < 58
+        av_register_all();
+#endif
+    avformat_network_init();
+
+    ctx->fmt = avformat_alloc_context();
+    int ret = avformat_alloc_output_context2(&ctx->fmt,NULL,NULL,path);
+    ctx->astream = avformat_new_stream(ctx->fmt,NULL);
+    ctx->vstream = avformat_new_stream(ctx->fmt,NULL);
+
+    if(!(ctx->fmt->flags&AVFMT_NOFILE)){
+        ret = avio_open(&ctx->fmt->pb,path,AVIO_FLAG_WRITE);
+        if(ret<0){
+            SAVLOGE("avio open error may networke error!");
+            return SAVED_E_AVLIB_ERROR;
+        }
+    }
+    ctx->is_write_header = 0;
+
+    if(ctx->astream!=NULL) {
+        ctx->astream->time_base = enctx->actx->time_base;
+        ctx->astream->codecpar->bit_rate = enctx->actx->bit_rate;
+        ctx->astream->codecpar->format = enctx->audioResampleCtx->tgt->fmt;
+        ctx->astream->codecpar->channel_layout = enctx->audioResampleCtx->tgt->ch_layout;
+        ctx->astream->codecpar->channels = enctx->audioResampleCtx->tgt->ch;
+        ctx->astream->codecpar->sample_rate = enctx->audioResampleCtx->tgt->sample;
+        ctx->astream->codecpar->frame_size = enctx->actx->frame_size;
+        ctx->astream->codecpar->codec_type = enctx->actx->codec_type;
+        ctx->astream->codecpar->codec_id = enctx->actx->codec_id;
+    }
+
+    if(ctx->vstream != NULL) {
+        ctx->vstream->time_base = enctx->vctx->time_base;
+        ctx->vstream->codecpar->bit_rate = enctx->vctx->bit_rate;
+        ctx->vstream->codecpar->format = enctx->videoScaleCtx->tgt->fmt;
+        ctx->vstream->codecpar->width = enctx->videoScaleCtx->tgt->width;
+        ctx->vstream->codecpar->height = enctx->videoScaleCtx->tgt->height;
+        ctx->vstream->codecpar->codec_id = enctx->vctx->codec_id;
+        ctx->vstream->codecpar->codec_type = enctx->vctx->codec_type;
+    }
+
+
+    return ret;
 }
 
 int saved_format_get_pkt(SAVEDFormat *ctx, AVPacket *pkt) {
@@ -122,6 +174,42 @@ int saved_format_get_pkt(SAVEDFormat *ctx, AVPacket *pkt) {
     return SAVED_OP_OK;
 }
 
-int saved_format_send_pkt(SAVEDFormat *ctx, AVPacket *pkt) {
-    return SAVED_E_UNDEFINE;
+int saved_format_send_pkt(SAVEDFormat *ctx, SAVEDPkt *pkt) {
+    RETIFNULL(ctx) SAVED_E_USE_NULL;
+    RETIFNULL(pkt) SAVED_E_USE_NULL;
+    RETIFNULL(ctx->fmt) SAVED_E_USE_NULL;
+    int ret = 0;
+
+    if(!ctx->is_write_header){
+        ret = avformat_write_header(ctx->fmt,NULL);
+        if(ret<0){
+            SAVLOGE("write header error\n");
+            return  ret;
+        }
+        ctx->is_write_header = 1;
+    }
+
+
+    AVStream *stream  = NULL;
+    switch (pkt->type){
+        case SAVED_MEDIA_TYPE_AUDIO:
+            stream = ctx->astream;
+            break;
+        case SAVED_MEDIA_TYPE_VIDEO:
+            stream = ctx->vstream;
+            break;
+        default:
+            return SAVED_E_UNDEFINE;
+    }
+    AVPacket *ipkt = (AVPacket*)pkt->internalPkt;
+    ipkt->stream_index = stream->index;
+
+    ipkt->pts = av_rescale_q_rnd(ipkt->pts,(AVRational){1,1000},stream->time_base,AV_ROUND_INF|AV_ROUND_PASS_MINMAX);
+    ipkt->dts = av_rescale_q_rnd(ipkt->dts,(AVRational){1,1000},stream->time_base,AV_ROUND_INF|AV_ROUND_PASS_MINMAX);
+    ipkt->duration= av_rescale_q(ipkt->duration,(AVRational){1,1000},stream->time_base);
+    ipkt->pos  = -1;
+    ret = av_write_frame(ctx->fmt,ipkt);
+// ret = av_interleaved_write_frame(ctx->fmt,ipkt);
+
+    return ret;
 }

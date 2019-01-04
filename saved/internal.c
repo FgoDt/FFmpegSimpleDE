@@ -13,6 +13,7 @@ SAVEDInternalContext* saved_internal_alloc() {
         return NULL;
     }
     ctx->savctx = NULL;
+    ctx->fmt = NULL;
     ctx->isencoder = 0;
     return ctx;
 }
@@ -64,7 +65,7 @@ int saved_internal_open(SAVEDInternalContext *ictx,const char* path, const char 
     int ret = 0;
     if (ictx->isencoder&&path!=NULL)
     {
-       ret = saved_format_open_output(ictx->fmt, path, options);
+        return SAVED_E_UNDEFINE;
     }
     else if(path!=NULL)
     {
@@ -94,8 +95,14 @@ int saved_internal_opne_with_par(SAVEDInternalContext *ictx, const char *path, c
                                                                         int ach, int asample_rate, int abit_rate){
     if(ictx->isencoder){
         ictx->savctx = saved_codec_alloc();
-        ictx->fmt = NULL;
         int ret = saved_codec_open_with_par(ictx->savctx,vh,vw,NULL,vbit_rate,asample_rate,NULL,ach,abit_rate);
+
+        if(path != NULL){
+            ictx->fmt = saved_format_alloc();
+            SAVEDCodecContext *enctx = (SAVEDCodecContext*)ictx->savctx;
+            ret =  saved_format_open_output(ictx->fmt,enctx->encoderctx,path,options);
+        }
+
         return ret;
     }
 
@@ -134,8 +141,14 @@ int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
 
 int saved_internal_send_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
 
-    saved_codec_send_pkt((SAVEDCodecContext *) ictx->savctx, pkt);
-    return SAVED_E_UNDEFINE;
+    int ret = 0;
+    if(ictx->isencoder){
+       ret = saved_format_send_pkt(ictx->fmt,pkt);
+    } else{
+       ret = saved_codec_send_pkt((SAVEDCodecContext *) ictx->savctx, pkt);
+
+    }
+    return ret;
 }
 
 

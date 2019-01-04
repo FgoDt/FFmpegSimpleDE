@@ -47,7 +47,8 @@ int saved_codec_open(SAVEDCodecContext *ictx, SAVEDFormat *fmt){
 
 
 int saved_codec_open_with_par(SAVEDCodecContext *savctx, int vh, int vw, int vfmt,int vbit_rate,
-                                                                                                                                int asample_rate, int afmt, int ach, int abit_rate ){
+                         int asample_rate, int afmt, int ach, int abit_rate ){
+    RETIFNULL(savctx) SAVED_E_USE_NULL;
 
     if(savctx->isencoder){
         savctx->encoderctx= saved_encoder_alloc();
@@ -143,7 +144,10 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
             f->pts = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pts;
             f->duration = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pkt_duration;
             f->fmt  = ictx->decoderctx->videoScaleCtx->tgt->fmt;
+            f->width = ictx->decoderctx->videoScaleCtx->tgt->width;
+            f->height = ictx->decoderctx->videoScaleCtx->tgt->height;
             f->size = yuvsize;
+            memcpy(f->linesize,ictx->decoderctx->idst_frame->linesize,8*sizeof(int));
 
         }
 

@@ -167,14 +167,29 @@ int saved_send_frame(SAVEDContext *ctx, SAVEDFrame *f) {
     RETIFNULL(f->internalframe) SAVED_E_USE_NULL;
 
     AVFrame *iframe = (AVFrame*)f->internalframe;
-    iframe->nb_samples = f->nb_sample;
     iframe->pts = f->pts;
     iframe->pkt_duration = f->duration;
     iframe->format = f->fmt;
-    iframe->channels = f->ch;
-    if(iframe->data[0]== NULL){
-        av_frame_get_buffer(iframe,0);
+    if(f->type == SAVED_MEDIA_TYPE_AUDIO){
+        iframe->nb_samples = f->nb_sample;
+        iframe->channels = f->ch;
+        if(f->data[0] == NULL){
+            av_frame_get_buffer(iframe,0);
+        }
         avcodec_fill_audio_frame(iframe,f->ch,f->fmt,f->data,f->size,0);
+    }
+    if(f->type == SAVED_MEDIA_TYPE_VIDEO){
+        iframe->width =f->width;
+        iframe->height = f->height;
+        iframe->format = AV_PIX_FMT_YUV420P;
+        if(iframe->data[0] == NULL){
+            av_frame_get_buffer(iframe,0);
+        }
+        int ysize = f->size/1.5;
+        memcpy(iframe->data[0],f->data,ysize);
+        memcpy(iframe->data[1],f->data+ysize,ysize/4);
+        memcpy(iframe->data[2],f->data+ysize+ysize/4,ysize/4);
+
     }
 
 

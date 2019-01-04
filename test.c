@@ -11,17 +11,18 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fftest/tn.flv";
+        url = "/home/fftest/sp.mkv";
     }
 
 
     SAVEDContext *ctx = saved_create_context();
     SAVEDContext *enctx = saved_create_context();
    // saved_open_with_par(enctx,NULL,NULL,1,840,480,0,0,44100,2,-1,-1);
-saved_open_with_par(enctx,NULL,NULL,1,480,640,0,0,44100,2,-1,-1);
-    
+
 
     saved_open(ctx, url, NULL, 0);
+    saved_open_with_par(enctx,"/home/fftest/avaava.mp4",NULL,1,480,640,0,0,44100,2,-1,-1);
+    //saved_open_with_par(enctx,NULL,NULL,1,480,640,0,0,44100,2,-1,-1);
     SAVEDPkt *pkt = saved_create_pkt();
     SAVEDPkt *enpkt = saved_create_pkt();
     SAVEDPkt *envpkt = saved_create_pkt();
@@ -47,14 +48,16 @@ saved_open_with_par(enctx,NULL,NULL,1,480,640,0,0,44100,2,-1,-1);
        // if(pkt->type == SAVED_MEDIA_TYPE_VIDEO)
               saved_send_pkt(ctx, pkt);
         flag =  saved_get_frame(ctx, f);
-        printf("get frame dur %f pts %f size %d \n",f->duration,f->pts, f->size);
+        //printf("get frame dur %f pts %f size %d \n",f->duration,f->pts, f->size);
         if(flag == 0){
             int ret = 0;
             ret = saved_send_frame(enctx,f);
             ret = saved_get_pkt(enctx,envpkt);
+            if(ret == 0){
+                saved_send_pkt(enctx,envpkt);
+            }
             saved_pkt_unref(envpkt);
         }
-        continue;
         flag =  saved_get_frame(ctx,af);
         saved_pkt_unref(pkt);
         if(flag == 0){
@@ -68,11 +71,17 @@ saved_open_with_par(enctx,NULL,NULL,1,480,640,0,0,44100,2,-1,-1);
                 while (ret==0) {
                     printf("in error -11\n");
                     ret = saved_get_pkt(enctx, enpkt);
+                    if(ret == 0){
+                        saved_send_pkt(enctx,enpkt);
+                    }
                     saved_pkt_unref(enpkt);
                 }
                 goto re_send_frame;
             }
             ret = saved_get_pkt(enctx, enpkt);
+            if(ret == 0){
+                saved_send_pkt(enctx,enpkt);
+            }
         }
         saved_pkt_unref(enpkt);
     }

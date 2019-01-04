@@ -57,7 +57,7 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
     ctx->vctx->height = vh;
     ctx->vctx->time_base = (AVRational){1,1000};
     ctx->vctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    ctx->vctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+   // ctx->vctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     ctx->videoScaleCtx = saved_video_scale_alloc();
     if(ctx->videoScaleCtx == NULL){
@@ -107,7 +107,7 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
     ctx->actx->sample_rate = asample_rate;
     ctx->actx->sample_fmt = AV_SAMPLE_FMT_S16;
     ctx->actx->time_base = (AVRational){1,1000};
-    ctx->actx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+   // ctx->actx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     ctx->audioResampleCtx = saved_resample_alloc();
     if(NULL== ctx->audioResampleCtx){
         goto error_aencoder;
@@ -191,6 +191,15 @@ static  int set_audio_fifo(SAVEDEncoderContext *ctx){
     return SAVED_OP_OK;
 }
 
+FILE *tf = NULL;
+void test_encoder(char *name,int n, void *data){
+    if(tf == NULL){
+        tf = fopen(name,"wb");
+        fwrite(data,1,n,tf);
+    }
+    fwrite(data,1,n,tf);
+}
+
 int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
     RETIFNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(frame) SAVED_E_USE_NULL;
@@ -210,6 +219,7 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
                 ctx->iadst_frame = av_frame_alloc();
                 ctx->iadst_frame->format = ctx->audioResampleCtx->tgt->fmt;
                 ctx->iadst_frame->channels = ctx->audioResampleCtx->tgt->ch;
+
                 ctx->iadst_frame->sample_rate = ctx->audioResampleCtx->tgt->sample;
                 //dont know how many samples need alloc
                 ctx->iadst_frame->nb_samples = 20480 +256;
@@ -245,6 +255,7 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
                 double one_frame_time = (double)1024/ctx->audioResampleCtx->tgt->sample;
                 enf->pts = ctx->aenpts*1000;
                 enf->pkt_duration =one_frame_time*1000;
+                // ipkt->dts = av_rescale_q_rnd(ipkt->dts,stream->time_base,stream->time_base,AV_ROUND_INF|AV_ROUND_PASS_MINMAX);
                 ret = avcodec_send_frame(ictx,enf);
                 if(ret == 0){
                     av_audio_fifo_drain(ctx->fifo,1024);
@@ -276,8 +287,16 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
                 ctx->ivdst_frame->height = ctx->videoScaleCtx->tgt->height;
                 av_frame_get_buffer(ctx->ivdst_frame,0);
             }
+          //  AVFrame *tframe = frame->internalframe;
+          //  int val = frame->pts*1000;
+           // int ysize = tframe->linesize[0]*tframe->height;
+           // memset(tframe->data[0],val%255,ysize);
+           // memset(tframe->data[1],val%255,ysize/4);
+           // memset(tframe->data[2],val%255,ysize/4);
             ret = saved_video_scale(ctx->videoScaleCtx,frame->internalframe,ctx->ivdst_frame);
+           // tframe = ctx->ivdst_frame;
             ctx->ivdst_frame->pts = frame->pts*1000;
+            ctx->ivdst_frame->pkt_dts = ctx->ivdst_frame->pts;
             ctx->ivdst_frame->pkt_duration = frame->duration*1000;
             if(ret<0){
                 SAVLOGE("video scale error \n");
@@ -293,6 +312,10 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
     return SAVED_E_NO_MEDIAFILE;
 }
 
+
+
+int fff = 0;
+
 int saved_encoder_recive_pkt(SAVEDEncoderContext *ctx,SAVEDPkt *pkt){
     RETIFNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(pkt) SAVED_E_USE_NULL;
@@ -304,7 +327,15 @@ if(pkt->type == SAVED_MEDIA_TYPE_AUDIO){
 }
 
 if(pkt->type == SAVED_MEDIA_TYPE_VIDEO){
-    ret = avcodec_receive_packet(ctx->vctx,pkt->internalPkt);
+    AVPacket *ipkt = pkt->internalPkt;
+    ret = avcodec_receive_packet(ctx->vctx,ipkt);
+    if(ret == 0){
+        if(fff == 0){
+           fff = 1;
+            test_encoder("./abc.h264",ctx->vctx->extradata_size,ctx->vctx->extradata);
+        }
+        test_encoder("./abc.h264",ipkt->size,ipkt->data);
+    }
     return ret;
 }
 
@@ -357,6 +388,9 @@ void  saved_encoder_close(SAVEDEncoderContext *ctx){
     if(NULL!=ctx->iadst_frame){
         av_frame_unref(ctx->iadst_frame);
         av_frame_free(&ctx->iadst_frame);
+    }
+    if(tf!=NULL){
+        fclose(tf);
     }
     free(ctx);
 }
