@@ -17,6 +17,7 @@ typedef struct SAVEDFormat {
     int best_audio_index;
     int best_video_index;
     int is_write_header;
+    double start_pts;
 }SAVEDFormat;
 
 SAVEDFormat *saved_format_alloc();

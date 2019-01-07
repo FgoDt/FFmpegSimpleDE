@@ -17,16 +17,25 @@ SAVEDFormat* saved_format_alloc() {
     fmt->astream = NULL;
     fmt->vstream = NULL;
     fmt->sstream = NULL;
+    fmt->is_write_header = 0;
+    fmt->start_pts = -1;
     return fmt;
 }
 
 int saved_format_close(SAVEDFormat *fmt){
     RETIFNULL(fmt) SAVED_E_USE_NULL;
+
     if(fmt->fmt){
         if(fmt->is_write_header){
             av_write_trailer(fmt->fmt);
         }
-        avformat_close_input(&fmt->fmt);
+    }
+
+    avformat_close_input(&fmt->fmt);
+    if(fmt->fmt&&!(fmt->fmt->flags&AVFMT_NOFILE)){
+        avio_close(fmt->fmt->pb);
+    }
+    if(fmt->fmt) {
         avformat_free_context(fmt->fmt);
         SAVED_SET_NULL(fmt->fmt);
     }
@@ -124,7 +133,7 @@ int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char 
 
     ctx->fmt = avformat_alloc_context();
     int ret = avformat_alloc_output_context2(&ctx->fmt,NULL,NULL,path);
-    ctx->astream = avformat_new_stream(ctx->fmt,NULL);
+   // ctx->astream = avformat_new_stream(ctx->fmt,NULL);
     ctx->vstream = avformat_new_stream(ctx->fmt,NULL);
 
     if(!(ctx->fmt->flags&AVFMT_NOFILE)){
@@ -156,6 +165,10 @@ int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char 
         ctx->vstream->codecpar->height = enctx->videoScaleCtx->tgt->height;
         ctx->vstream->codecpar->codec_id = enctx->vctx->codec_id;
         ctx->vstream->codecpar->codec_type = enctx->vctx->codec_type;
+        AVCodecParameters *parameters = avcodec_parameters_alloc();
+        avcodec_parameters_from_context(parameters,enctx->vctx);
+        avcodec_parameters_copy(ctx->vstream->codecpar,parameters);
+        avcodec_parameters_free(&parameters);
     }
 
 
@@ -193,7 +206,7 @@ int saved_format_send_pkt(SAVEDFormat *ctx, SAVEDPkt *pkt) {
     AVStream *stream  = NULL;
     switch (pkt->type){
         case SAVED_MEDIA_TYPE_AUDIO:
-            stream = ctx->astream;
+            //stream = ctx->astream;
             break;
         case SAVED_MEDIA_TYPE_VIDEO:
             stream = ctx->vstream;
@@ -201,13 +214,22 @@ int saved_format_send_pkt(SAVEDFormat *ctx, SAVEDPkt *pkt) {
         default:
             return SAVED_E_UNDEFINE;
     }
+    if(stream == NULL){
+        return SAVED_E_NO_MEDIAFILE;
+    }
     AVPacket *ipkt = (AVPacket*)pkt->internalPkt;
     ipkt->stream_index = stream->index;
+
 
     ipkt->pts = av_rescale_q_rnd(ipkt->pts,(AVRational){1,1000},stream->time_base,AV_ROUND_INF|AV_ROUND_PASS_MINMAX);
     ipkt->dts = av_rescale_q_rnd(ipkt->dts,(AVRational){1,1000},stream->time_base,AV_ROUND_INF|AV_ROUND_PASS_MINMAX);
     ipkt->duration= av_rescale_q(ipkt->duration,(AVRational){1,1000},stream->time_base);
     ipkt->pos  = -1;
+
+    if(stream->start_time < 0){
+        stream->start_time = ipkt->pts;
+    }
+    stream->duration = ipkt->pts-stream->start_time;
     ret = av_write_frame(ctx->fmt,ipkt);
 // ret = av_interleaved_write_frame(ctx->fmt,ipkt);
 

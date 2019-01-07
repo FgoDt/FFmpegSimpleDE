@@ -57,7 +57,7 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
     ctx->vctx->height = vh;
     ctx->vctx->time_base = (AVRational){1,1000};
     ctx->vctx->pix_fmt = AV_PIX_FMT_YUV420P;
-   // ctx->vctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    ctx->vctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     ctx->videoScaleCtx = saved_video_scale_alloc();
     if(ctx->videoScaleCtx == NULL){
@@ -107,7 +107,7 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
     ctx->actx->sample_rate = asample_rate;
     ctx->actx->sample_fmt = AV_SAMPLE_FMT_S16;
     ctx->actx->time_base = (AVRational){1,1000};
-   // ctx->actx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    ctx->actx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     ctx->audioResampleCtx = saved_resample_alloc();
     if(NULL== ctx->audioResampleCtx){
         goto error_aencoder;
