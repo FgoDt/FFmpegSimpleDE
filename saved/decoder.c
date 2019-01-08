@@ -97,9 +97,9 @@ void saved_decoder_close(SAVEDDecoderContext *ictx){
     if(ictx->audioResampleCtx){
         saved_resample_close(ictx->audioResampleCtx);
     }
-    if(ictx->picswbuf){
-        free(ictx->picswbuf);
-    }
+   // if(ictx->picswbuf){
+   //     free(ictx->picswbuf);
+   // }
 
     if(ictx->vctx){
         avcodec_close(ictx->vctx);
@@ -150,16 +150,19 @@ static  int set_video_scale(SAVEDDecoderContext *ctx){
     //default output pix format yuv420p
     saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height,ctx->vctx->width);
     int ret = saved_video_scale_open(ctx->videoScaleCtx);
+    ctx->idst_frame->format = ctx->videoScaleCtx->tgt->fmt;
+    ctx->idst_frame->width = ctx->videoScaleCtx->tgt->width;
+    ctx->idst_frame->height = ctx->videoScaleCtx->tgt->height;
+    ret = av_frame_get_buffer(ctx->idst_frame,0);
 
-    ctx->picswbuf = (uint8_t*)malloc(av_image_get_buffer_size(ctx->videoScaleCtx->tgt->fmt,
-            ctx->videoScaleCtx->tgt->width,ctx->videoScaleCtx->tgt->height,1));
 
-    av_image_fill_arrays(ctx->idst_frame->data,ctx->idst_frame->linesize,ctx->picswbuf,ctx->videoScaleCtx->tgt->fmt,
-    ctx->videoScaleCtx->tgt->width,ctx->videoScaleCtx->tgt->height,1);
 
     return  ret;
 }
 
+//resample audio setting
+//default fmt is s16
+//channels and sample rate not resample
 static  int set_audio_resample(SAVEDDecoderContext *ctx){
     RETIFNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(ctx->actx) SAVED_E_USE_NULL;
@@ -500,7 +503,7 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
     //audio swr
     if(ret == 0 && type == AVMEDIA_TYPE_AUDIO){
 
-        ret = saved_resample(ictx->audioResampleCtx,ictx->isrc_frame,ictx->iadst_frame->data);
+        ret = saved_resample(ictx->audioResampleCtx,ictx->isrc_frame,ictx->iadst_frame);
         if(ret>0) {
             f->nb_samples = ret;
             ret = SAVED_OP_OK;

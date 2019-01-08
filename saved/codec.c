@@ -159,7 +159,8 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
                 free(f->data);
             }
                 f->data = (unsigned char *) malloc(f->size);
-            memcpy(f->data,ictx->decoderctx->iadst_frame->extended_data,f->size);
+            //fixme when fmt is plane
+            memcpy(f->data,ictx->decoderctx->iadst_frame->data[0],f->size);
             f->pts =av_q2d(ictx->decoderctx->a_time_base) * ictx->decoderctx->isrc_frame->pts;
             f->duration = av_q2d(ictx->decoderctx->a_time_base)* ictx->decoderctx->isrc_frame->pkt_duration;
             f->nb_sample = iframe->nb_samples;

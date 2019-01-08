@@ -55,7 +55,7 @@ int saved_resample_open(SAVEDAudioResampleCtx* ctx){
 
 }
 
-int saved_resample(SAVEDAudioResampleCtx* ctx,AVFrame *inf, uint8_t **out){
+int saved_resample(SAVEDAudioResampleCtx* ctx,AVFrame *inf,AVFrame *out){
     RETIFNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(inf) SAVED_E_USE_NULL;
     RETIFNULL(out) SAVED_E_USE_NULL;
@@ -73,7 +73,7 @@ int saved_resample(SAVEDAudioResampleCtx* ctx,AVFrame *inf, uint8_t **out){
 
     int nb_out_sample = (int)inf->nb_samples*ctx->tgt->sample/inf->sample_rate+256;
 
-    int ret = swr_convert(ctx->swrContext,out,nb_out_sample,inf->extended_data,inf->nb_samples);
+    int ret = swr_convert(ctx->swrContext,out->data,nb_out_sample,inf->extended_data,inf->nb_samples);
 
 
     return  ret;

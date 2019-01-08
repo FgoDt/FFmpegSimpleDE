@@ -133,7 +133,7 @@ int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char 
 
     ctx->fmt = avformat_alloc_context();
     int ret = avformat_alloc_output_context2(&ctx->fmt,NULL,NULL,path);
-   // ctx->astream = avformat_new_stream(ctx->fmt,NULL);
+    ctx->astream = avformat_new_stream(ctx->fmt,NULL);
     ctx->vstream = avformat_new_stream(ctx->fmt,NULL);
 
     if(!(ctx->fmt->flags&AVFMT_NOFILE)){
@@ -146,25 +146,14 @@ int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char 
     ctx->is_write_header = 0;
 
     if(ctx->astream!=NULL) {
-        ctx->astream->time_base = enctx->actx->time_base;
-        ctx->astream->codecpar->bit_rate = enctx->actx->bit_rate;
-        ctx->astream->codecpar->format = enctx->audioResampleCtx->tgt->fmt;
-        ctx->astream->codecpar->channel_layout = enctx->audioResampleCtx->tgt->ch_layout;
-        ctx->astream->codecpar->channels = enctx->audioResampleCtx->tgt->ch;
-        ctx->astream->codecpar->sample_rate = enctx->audioResampleCtx->tgt->sample;
-        ctx->astream->codecpar->frame_size = enctx->actx->frame_size;
-        ctx->astream->codecpar->codec_type = enctx->actx->codec_type;
-        ctx->astream->codecpar->codec_id = enctx->actx->codec_id;
+        AVCodecParameters *parameters = avcodec_parameters_alloc();
+        avcodec_parameters_from_context(parameters,enctx->actx);
+        avcodec_parameters_copy(ctx->astream->codecpar,parameters);
+        avcodec_parameters_free(&parameters);
     }
 
     if(ctx->vstream != NULL) {
-        ctx->vstream->time_base = enctx->vctx->time_base;
-        ctx->vstream->codecpar->bit_rate = enctx->vctx->bit_rate;
-        ctx->vstream->codecpar->format = enctx->videoScaleCtx->tgt->fmt;
-        ctx->vstream->codecpar->width = enctx->videoScaleCtx->tgt->width;
-        ctx->vstream->codecpar->height = enctx->videoScaleCtx->tgt->height;
-        ctx->vstream->codecpar->codec_id = enctx->vctx->codec_id;
-        ctx->vstream->codecpar->codec_type = enctx->vctx->codec_type;
+
         AVCodecParameters *parameters = avcodec_parameters_alloc();
         avcodec_parameters_from_context(parameters,enctx->vctx);
         avcodec_parameters_copy(ctx->vstream->codecpar,parameters);
@@ -206,7 +195,7 @@ int saved_format_send_pkt(SAVEDFormat *ctx, SAVEDPkt *pkt) {
     AVStream *stream  = NULL;
     switch (pkt->type){
         case SAVED_MEDIA_TYPE_AUDIO:
-            //stream = ctx->astream;
+            stream = ctx->astream;
             break;
         case SAVED_MEDIA_TYPE_VIDEO:
             stream = ctx->vstream;
@@ -231,7 +220,6 @@ int saved_format_send_pkt(SAVEDFormat *ctx, SAVEDPkt *pkt) {
     }
     stream->duration = ipkt->pts-stream->start_time;
     ret = av_write_frame(ctx->fmt,ipkt);
-// ret = av_interleaved_write_frame(ctx->fmt,ipkt);
 
     return ret;
 }

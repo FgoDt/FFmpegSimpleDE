@@ -11,7 +11,7 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fftest/ava.mp4";
+        url = "/home/fftest/bb.mp4";
     }
 
 
@@ -21,7 +21,7 @@ int main(int argc,char **argv) {
 
 
     saved_open(ctx, url, NULL, 0);
-    saved_open_with_par(enctx,"/home/fftest/avaava.mp4",NULL,1,480,640,0,0,44100,2,-1,-1);
+    saved_open_with_par(enctx,"/home/fftest/avaava.mp4",NULL,1,1080,1920,0,0,44100,2,-1,-1);
     //saved_open_with_par(enctx,NULL,NULL,1,480,640,0,0,44100,2,-1,-1);
     SAVEDPkt *pkt = saved_create_pkt();
     SAVEDPkt *enpkt = saved_create_pkt();
@@ -84,6 +84,16 @@ int main(int argc,char **argv) {
             }
         }
         saved_pkt_unref(enpkt);
+    }
+    int ret = 0;
+     ret = saved_get_frame(ctx,af);
+    while((ret = saved_get_pkt(enctx,enpkt)) == 0){
+        saved_send_pkt(enctx,enpkt);
+        saved_pkt_unref(enpkt);
+    }
+    while((saved_get_pkt(enctx,envpkt))==0){
+        saved_send_pkt(enctx,envpkt);
+        saved_pkt_unref(envpkt);
     }
 //    saved_get_pkt(ctx,pkt);
 //    saved_send_pkt(ctx,pkt);

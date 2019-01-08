@@ -30,7 +30,6 @@ typedef struct SAVEDDecoderContext {
     AVFrame *ihw_frame;  // internal hard ware decode frame
 
     AVPacket *ipkt;  // internal packet
-    uint8_t *picswbuf;//
 
     AVFrame *iadst_frame; //audio dst frame;
 
