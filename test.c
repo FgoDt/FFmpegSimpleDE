@@ -11,7 +11,7 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fftest/bb.mp4";
+        url = "/home/fftest/b.mp4";
     }
 
 
@@ -21,7 +21,7 @@ int main(int argc,char **argv) {
 
 
     saved_open(ctx, url, NULL, 0);
-    saved_open_with_par(enctx,"/home/fftest/avaava.mp4",NULL,1,1080,1920,0,0,44100,2,-1,-1);
+    saved_open_with_par(enctx,"/home/fftest/avaava.mp4",NULL,1,240,320,0,0,44100,2,-1,-1);
     //saved_open_with_par(enctx,NULL,NULL,1,480,640,0,0,44100,2,-1,-1);
     SAVEDPkt *pkt = saved_create_pkt();
     SAVEDPkt *enpkt = saved_create_pkt();
@@ -106,6 +106,7 @@ int main(int argc,char **argv) {
 
     saved_del_pkt(pkt);
     saved_del_pkt(enpkt);
+    saved_del_pkt(envpkt);
     saved_del_frame(f);
     saved_del_frame(af);
     saved_close(ctx);
