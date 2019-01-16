@@ -173,8 +173,9 @@ int saved_send_frame(SAVEDContext *ctx, SAVEDFrame *f) {
     if(f->type == SAVED_MEDIA_TYPE_AUDIO){
         iframe->nb_samples = f->nb_sample;
         iframe->channels = f->ch;
-        if(f->data[0] == NULL){
+        if(iframe->data[0] == NULL){
             av_frame_get_buffer(iframe,0);
+
         }
         avcodec_fill_audio_frame(iframe,f->ch,f->fmt,f->data,f->size,0);
     }

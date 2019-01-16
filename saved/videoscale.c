@@ -16,7 +16,9 @@ SAVEDVideoScaleCtx* saved_video_scale_alloc(){
     ctx->tgt = NULL;
     ctx->src = NULL;
     ctx->src = malloc(sizeof(SAVEDPicPar));
+    memset(ctx->src,0,sizeof(SAVEDPicPar));
     ctx->tgt = malloc(sizeof(SAVEDPicPar));
+    memset(ctx->tgt,0,sizeof(SAVEDPicPar));
     ctx->sws = NULL;
     ctx->usehw = 0;
     return  ctx;

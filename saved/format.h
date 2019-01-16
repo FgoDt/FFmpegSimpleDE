@@ -28,6 +28,9 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
 
 int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext,const char *path,const char *options);
 
+int saved_format_open_output_with_par(SAVEDFormat *ctx,int vw, int vh, uint8_t *vextradata, int vextradata_size,
+                                                        int ach, int asample_rate, uint8_t *aextradata, int aextradata_size);
+
 int saved_format_get_pkt(SAVEDFormat *ctx, AVPacket *pkt);
 
 int saved_format_send_pkt(SAVEDFormat *ctx, SAVEDPkt *pkt);

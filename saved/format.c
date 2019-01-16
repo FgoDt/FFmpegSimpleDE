@@ -31,7 +31,9 @@ int saved_format_close(SAVEDFormat *fmt){
         }
     }
 
-    avformat_close_input(&fmt->fmt);
+    if(!fmt->is_write_header){
+        avformat_close_input(&fmt->fmt);
+    }
     if(fmt->fmt&&!(fmt->fmt->flags&AVFMT_NOFILE)){
         avio_close(fmt->fmt->pb);
     }
@@ -131,7 +133,7 @@ int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char 
 #endif
     avformat_network_init();
 
-    ctx->fmt = avformat_alloc_context();
+   // ctx->fmt = avformat_alloc_context();
     int ret = avformat_alloc_output_context2(&ctx->fmt,NULL,NULL,path);
     ctx->astream = avformat_new_stream(ctx->fmt,NULL);
     ctx->vstream = avformat_new_stream(ctx->fmt,NULL);
