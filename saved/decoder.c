@@ -170,7 +170,7 @@ static  int set_audio_resample(SAVEDDecoderContext *ctx){
     ctx->audioResampleCtx = saved_resample_alloc();
     RETIFNULL(ctx->audioResampleCtx) SAVED_E_NO_MEM;
 
-   int ret =  saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_S16,ctx->actx->channels,ctx->actx->sample_rate);
+   int ret =  saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_S16,2,44100);
 
    ret |= saved_resample_set_fmtpar(ctx->audioResampleCtx->src,ctx->actx->sample_fmt,ctx->actx->channels,ctx->actx->sample_rate);
 

@@ -240,6 +240,13 @@ int saved_get_metadata(SAVEDContext *ctx, char *key, char **val){
     return  ret;
 }
 
+int saved_set_audio_par(SAVEDContext *ctx,int ch, int sample_rate, int fmt);
+
+int saved_set_video_par(SAVEDContext *ctx, int w, int h, int fmt);
+
+int saved_get_audio_par(SAVEDContext *ctx,int ch, int sample_rate, int fmt);
+
+int saved_get_vidoe_par(SAVEDContext *ctx,int w, int h, int fmt);
 
 
 #else

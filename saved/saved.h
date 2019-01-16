@@ -88,6 +88,14 @@ int saved_get_pkt_raw(SAVEDContext *ctx,unsigned char * data, int size);
 
 int saved_get_metadata(SAVEDContext *ctx, char *key, char **val);
 
+int saved_set_audio_par(SAVEDContext *ctx,int ch, int sample_rate, int fmt);
+
+int saved_set_video_par(SAVEDContext *ctx, int w, int h, int fmt);
+
+int saved_get_audio_par(SAVEDContext *ctx,int ch, int sample_rate, int fmt);
+
+int saved_get_video_par(SAVEDContext *ctx,int w, int h, int fmt);
+
 
 int test();
 
