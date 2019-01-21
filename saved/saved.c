@@ -241,13 +241,30 @@ int saved_get_metadata(SAVEDContext *ctx, char *key, char **val){
     return  ret;
 }
 
-int saved_set_audio_par(SAVEDContext *ctx,int ch, int sample_rate, int fmt);
+int saved_set_audio_par(SAVEDContext *ctx,int ch, int sample_rate, int fmt){
+    RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
+    int ret = saved_internal_set_audio_par(ctx->ictx,ch,sample_rate,fmt);
+    return  ret;
+}
 
-int saved_set_video_par(SAVEDContext *ctx, int w, int h, int fmt);
+int saved_set_video_par(SAVEDContext *ctx, int w, int h, int fmt){
+    RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
+    int ret = saved_internal_set_video_par(ctx->ictx,w,h,fmt);
+    return ret;
 
-int saved_get_audio_par(SAVEDContext *ctx,int ch, int sample_rate, int fmt);
+}
 
-int saved_get_vidoe_par(SAVEDContext *ctx,int w, int h, int fmt);
+int saved_get_audio_par(SAVEDContext *ctx,int* ch, int* sample_rate, int* fmt){
+    RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
+    int ret = saved_internal_get_audio_par(ctx->ictx,ch,sample_rate,fmt);
+    return  ret;
+}
+
+int saved_get_vidoe_par(SAVEDContext *ctx,int *w, int *h, int* fmt){
+    RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
+    int ret = saved_internal_get_video_par(ctx->ictx,w,h,fmt);
+    return ret;
+}
 
 
 #else

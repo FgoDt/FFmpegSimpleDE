@@ -72,6 +72,8 @@ typedef struct SAVEDCodecContext{
 
     SAVEDDecoderContext *decoderctx;
     SAVEDEncoderContext *encoderctx;
+    SAVEDAudioPar *forceAudioPar;
+    SAVEDPicPar *forceVideoPar;
     int isencoder;
 }SAVEDCodecContext;
 

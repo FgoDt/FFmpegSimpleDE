@@ -48,4 +48,12 @@ int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
 
 int saved_internal_get_metatdata(SAVEDInternalContext *ictx,char *key,char **val);
 
+int saved_internal_set_audio_par(SAVEDInternalContext *ictx,int ach, int sample, int fmt);
+
+int saved_internal_set_video_par(SAVEDInternalContext *ictx,int vw, int vh, int fmt);
+
+int saved_internal_get_audio_par(SAVEDInternalContext *ictx,int *ach, int* sample, int* fmt);
+
+int saved_internal_get_video_par(SAVEDInternalContext *ictx,int* vw, int* vh, int* fmt);
+
 #endif 

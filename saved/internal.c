@@ -201,3 +201,53 @@ int saved_internal_get_metatdata(SAVEDInternalContext *ictx,char *key,char **val
     return  SAVED_OP_OK;
 
 }
+
+
+int saved_internal_set_audio_par(SAVEDInternalContext *ictx,int ach, int sample, int fmt){
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    SAVEDCodecContext *codecContext = (SAVEDCodecContext*)ictx->savctx;
+    if(codecContext->forceAudioPar == NULL){
+        codecContext->forceAudioPar = (SAVEDAudioPar*)malloc(sizeof(SAVEDAudioPar));
+    }
+    codecContext->forceAudioPar->ch=ach;
+    codecContext->forceAudioPar->sample = sample;
+    codecContext->forceAudioPar->fmt = fmt;
+    return SAVED_OP_OK;
+}
+
+int saved_internal_set_video_par(SAVEDInternalContext *ictx,int vw, int vh, int fmt){
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    SAVEDCodecContext *codecContext = (SAVEDCodecContext*)ictx->savctx;
+    if(codecContext->forceVideoPar== NULL){
+        codecContext->forceVideoPar = (SAVEDPicPar*)malloc(sizeof(SAVEDPicPar));
+    }
+    codecContext->forceVideoPar->fmt = fmt;
+    codecContext->forceVideoPar->height = vh;
+    codecContext->forceVideoPar->width = vw;
+    return  SAVED_OP_OK;
+}
+
+int saved_internal_get_audio_par(SAVEDInternalContext *ictx,int *ach, int* sample, int* fmt){
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    SAVEDCodecContext *codecContext = (SAVEDCodecContext*)ictx->savctx;
+    if(ictx->isencoder){
+        return SAVED_E_NO_MEDIAFILE;
+    }
+
+    *ach = codecContext->decoderctx->audioResampleCtx->tgt->ch;
+    *fmt= codecContext->decoderctx->audioResampleCtx->tgt->fmt;
+    *sample = codecContext->decoderctx->audioResampleCtx->tgt->sample;
+    return  SAVED_OP_OK;
+}
+
+int saved_internal_get_video_par(SAVEDInternalContext *ictx,int* vw, int* vh, int* fmt){
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    SAVEDCodecContext *codecContext = (SAVEDCodecContext*)ictx->savctx;
+    if(ictx->isencoder){
+        return SAVED_E_NO_MEDIAFILE;
+    }
+    *vw = codecContext->decoderctx->videoScaleCtx->tgt->width;
+    *vh = codecContext->decoderctx->videoScaleCtx->tgt->height;
+    *fmt= codecContext->decoderctx->videoScaleCtx->tgt->fmt;
+    return  SAVED_OP_OK;
+}
