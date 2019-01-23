@@ -30,7 +30,7 @@ SAVEDInternalContext* saved_internal_alloc();
  * @param options open option
  * return >= 0 if ok 
  **/
-int saved_internal_open(SAVEDInternalContext *ictx, const char* path, const char *options);
+int saved_internal_open(SAVEDInternalContext *ictx, const char* path, void *options);
 
 int saved_internal_opne_with_par(SAVEDInternalContext *ictx, const char *path, const char *options,
                                                                         int vh, int vw, int vbit_rate, 

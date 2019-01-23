@@ -57,7 +57,7 @@ void saved_copy_pkt_dsc(SAVEDPkt *pkt) {
     pkt->size = ipkt->size;
 }
 
-int saved_internal_open(SAVEDInternalContext *ictx,const char* path, const char *options) {
+int saved_internal_open(SAVEDInternalContext *ictx,const char* path, void *options) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
 
     ictx->fmt = saved_format_alloc();
@@ -119,6 +119,13 @@ int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
     if (ictx->isencoder)
     {
        ret =  saved_codec_get_pkt(ictx->savctx,pkt);
+       saved_copy_pkt_dsc(pkt);
+       if(pkt->data!=NULL){
+           free(pkt->data);
+       }
+       struct AVPacket *ipkt = (struct AVPacket*)pkt->internalPkt;
+       pkt->data = (unsigned char*)malloc(pkt->size);
+       memcpy(pkt->data,ipkt->data,pkt->size);
     }
     else
     {
@@ -132,6 +139,8 @@ int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
         pkt->pts = av_q2d(ictx->fmt->fmt->streams[ipkt->stream_index]->time_base)*pkt->pts;
         pkt->duration = av_q2d(ictx->fmt->fmt->streams[ipkt->stream_index]->time_base)*pkt->duration;
         pkt->type = ictx->fmt->allTypes[ipkt->stream_index];
+        pkt->data = (unsigned char*)malloc(pkt->size);
+        memcpy(pkt->data,ipkt->data,pkt->size);
     }
 
 

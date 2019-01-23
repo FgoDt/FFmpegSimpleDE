@@ -15,8 +15,14 @@ typedef enum SAVEDMEDIA_TYPE {
     SAVED_MEDIA_TYPE_NB
 }SAVEDMEDIA_TYPE;
 
+typedef struct SAVEDAudioPar SAVEDAudioPar;
+typedef struct SAVEDPicPar SAVEDPicPar;
+typedef struct SAVEDInternalContext SAVEDInternalContex;
+
 typedef struct SAVEDContext {
-    void *ictx;
+    struct SAVEDInternalContext *ictx;
+    SAVEDAudioPar *audioPar;
+    SAVEDPicPar *picPar;
     int openmark;
 }SAVEDContext;
 
