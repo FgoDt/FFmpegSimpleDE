@@ -255,6 +255,12 @@ int saved_internal_get_video_par(SAVEDInternalContext *ictx,int* vw, int* vh, in
     if(ictx->isencoder){
         return SAVED_E_NO_MEDIAFILE;
     }
+    if(codecContext->decoderctx->vctx == NULL){
+        *vw = 0;
+        *vh = 0;
+        *fmt = -1;
+        return SAVED_OP_OK;
+    }
     *vw = codecContext->decoderctx->videoScaleCtx->tgt->width;
     *vh = codecContext->decoderctx->videoScaleCtx->tgt->height;
     *fmt= codecContext->decoderctx->videoScaleCtx->tgt->fmt;

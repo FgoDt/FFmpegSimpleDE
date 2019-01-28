@@ -81,6 +81,9 @@ int saved_pkt_unref(SAVEDPkt *pkt){
     if(pkt->internalPkt != NULL){
         av_packet_unref(pkt->internalPkt);
     }
+    if(pkt->data!=NULL){
+        free(pkt->data);
+    }
     return SAVED_OP_OK;
 }
 
@@ -90,6 +93,7 @@ int saved_del_pkt(SAVEDPkt *pkt) {
     if (pkt->data)
     {
         free(pkt->data);
+        pkt->data = NULL;
     }
     if (pkt->internalPkt)
     {
@@ -116,6 +120,10 @@ int saved_frame_unref(SAVEDFrame *savedFrame){
     RETIFNULL(savedFrame) SAVED_E_USE_NULL;
     if(savedFrame->internalframe!=NULL){
         av_frame_unref(savedFrame->internalframe);
+    }
+    if(savedFrame->data!=NULL){
+        free(savedFrame->data);
+        savedFrame->data = NULL;
     }
     return  SAVED_OP_OK;
 }

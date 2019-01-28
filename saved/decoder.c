@@ -57,7 +57,7 @@ int saved_hw_decoder_init(SAVEDDecoderContext *ctx, const enum AVHWDeviceType ty
     {
        SAVLOGW("create hw device error");
         
-        return SAVED_OP_OK;
+        return SAVED_E_AVLIB_ERROR;
     }
 
     ctx->vctx->hw_device_ctx = av_buffer_ref(ctx->hw_bufferref);
@@ -374,6 +374,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
             }
 
 
+            void *temp = savctx->vctx->get_format;
             savctx->vctx->pix_fmt = hwpixfmt;
             savctx->vctx->get_format = saved_get_hw_format;
 
@@ -387,6 +388,8 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
                 if(savctx->hw_bufferref != NULL)
                     av_buffer_unref(&savctx->hw_bufferref);
                 savctx->use_hw = 0;
+                savctx->vctx->pix_fmt= AV_PIX_FMT_YUV420P;
+                savctx->vctx->get_format = temp;
             }
 
         }
