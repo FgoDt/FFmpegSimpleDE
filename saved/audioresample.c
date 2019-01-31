@@ -63,7 +63,7 @@ int saved_resample(SAVEDAudioResampleCtx* ctx,AVFrame *inf,AVFrame *out){
     if(ctx->src->sample != inf->sample_rate ||
             ctx->src->fmt != inf->format ||
             ctx->src->ch != inf->channels){
-        int ret =  saved_resample_set_fmtpar(ctx->src,inf->format,inf->channels,inf->format);
+        int ret =  saved_resample_set_fmtpar(ctx->src,inf->format,inf->channels,inf->sample_rate);
         ret |= saved_resample_open(ctx);
         if(ret!=SAVED_OP_OK){
             SAVLOGW("reopen audio resample  error");

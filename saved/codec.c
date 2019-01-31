@@ -142,6 +142,7 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
             memcpy(f->data+(int)(ysize*1.25),ictx->decoderctx->idst_frame->data[2],ysize/4);
             //printf("video src pts:%ld\n",ictx->decoderctx->isrc_frame->pts);
             f->pts = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pts;
+            ictx->decoderctx->decpts = f->pts;
             f->duration = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pkt_duration;
             f->fmt  = ictx->decoderctx->videoScaleCtx->tgt->fmt;
             f->width = ictx->decoderctx->videoScaleCtx->tgt->width;
@@ -163,6 +164,7 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
             memcpy(f->data,ictx->decoderctx->iadst_frame->data[0],f->size);
             f->pts =av_q2d(ictx->decoderctx->a_time_base) * ictx->decoderctx->isrc_frame->pts;
             f->duration = av_q2d(ictx->decoderctx->a_time_base)* ictx->decoderctx->isrc_frame->pkt_duration;
+            ictx->decoderctx->decpts = f->pts;
             f->nb_sample = iframe->nb_samples;
             f->fmt = ictx->decoderctx->audioResampleCtx->tgt->fmt;
             f->ch = ictx->decoderctx->audioResampleCtx->tgt->ch;

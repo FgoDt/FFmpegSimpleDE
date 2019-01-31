@@ -58,6 +58,19 @@ int saved_video_scale(SAVEDVideoScaleCtx *ctx, AVFrame *src, AVFrame *dst){
     RETIFNULL(dst) SAVED_E_USE_NULL;
 
     int ret = SAVED_E_UNDEFINE;
+
+    if(src->format != ctx->src->fmt ||
+            src->width != ctx->src->width ||
+            src->height != ctx->src->height){
+        sws_freeContext(ctx->sws);
+      ret = saved_video_scale_set_picpar(ctx->src,src->format,src->height,src->width);
+      if(ret != SAVED_OP_OK)
+          return  ret;
+      ret = saved_video_scale_open(ctx);
+      if(ret!=SAVED_OP_OK)
+          return ret;
+    }
+
     if (!ctx->usehw) {
         ret = sws_scale(ctx->sws, src->data,
             src->linesize, 0, ctx->src->height,

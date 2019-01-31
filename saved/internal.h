@@ -12,9 +12,11 @@
 #include<libavutil/time.h>
 #include<libavutil/avutil.h>
 
+typedef  struct SAVECodecContext SAVECodecContext;
+
 typedef struct SAVEDInternalContext{
     SAVEDFormat *fmt;
-    void *savctx;
+    SAVEDCodecContext *savctx;
     int isencoder;
 }SAVEDInternalContext;
 
@@ -55,5 +57,7 @@ int saved_internal_set_video_par(SAVEDInternalContext *ictx,int vw, int vh, int 
 int saved_internal_get_audio_par(SAVEDInternalContext *ictx,int *ach, int* sample, int* fmt);
 
 int saved_internal_get_video_par(SAVEDInternalContext *ictx,int* vw, int* vh, int* fmt);
+
+int saved_internal_seek(SAVEDInternalContext *ictx,double pts);
 
 #endif 

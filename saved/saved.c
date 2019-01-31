@@ -281,6 +281,12 @@ int saved_get_video_par(SAVEDContext *ctx,int *w, int *h, int *fmt){
     return ret;
 }
 
+int saved_seek(SAVEDContext *ctx,double pts){
+    RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
+    int ret = saved_internal_seek(ctx->ictx,pts);
+    return  ret;
+};
+
 
 #else
 

@@ -266,3 +266,20 @@ int saved_internal_get_video_par(SAVEDInternalContext *ictx,int* vw, int* vh, in
     *fmt= codecContext->decoderctx->videoScaleCtx->tgt->fmt;
     return  SAVED_OP_OK;
 }
+
+int saved_internal_seek(SAVEDInternalContext *ictx,double pts){
+    RETIFNULL(ictx) SAVED_E_USE_NULL;
+    RETIFNULL(ictx->fmt) SAVED_E_USE_NULL;
+    if(ictx->isencoder){
+        return SAVED_E_AVLIB_ERROR;
+    }
+    double rel = pts - ictx->savctx->decoderctx->decpts;
+    rel *=1000000;
+    int64_t seek_target = pts*1000*1000;
+    int64_t seek_min    = rel > 0 ? seek_target - rel + 2: INT64_MIN;
+    int64_t seek_max    = rel < 0 ? seek_target - rel - 2: INT64_MAX;
+
+
+    int ret =avformat_seek_file(ictx->fmt->fmt,-1,seek_min,seek_target,seek_max,AVSEEK_FLAG_BACKWARD);
+    return ret;
+}

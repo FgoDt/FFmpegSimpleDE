@@ -148,7 +148,7 @@ static  int set_video_scale(SAVEDDecoderContext *ctx){
         saved_video_scale_set_picpar(ctx->videoScaleCtx->src,AV_PIX_FMT_NV12,ctx->vctx->height,ctx->vctx->width);
     }
     //default output pix format yuv420p
-    saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height,ctx->vctx->width);
+    saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ceil(ctx->vctx->height/32)*32,ceil(ctx->vctx->width/32)*32);
     int ret = saved_video_scale_open(ctx->videoScaleCtx);
     ctx->idst_frame->format = ctx->videoScaleCtx->tgt->fmt;
     ctx->idst_frame->width = ctx->videoScaleCtx->tgt->width;

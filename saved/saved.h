@@ -102,6 +102,8 @@ int saved_get_audio_par(SAVEDContext *ctx,int* ch, int* sample_rate, int* fmt);
 
 int saved_get_video_par(SAVEDContext *ctx,int *w, int *h, int *fmt);
 
+int saved_seek(SAVEDContext *ctx,double pts);
+
 
 int test();
 
