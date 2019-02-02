@@ -80,9 +80,11 @@ int saved_pkt_unref(SAVEDPkt *pkt){
     RETIFNULL(pkt) SAVED_E_USE_NULL;
     if(pkt->internalPkt != NULL){
         av_packet_unref(pkt->internalPkt);
+
     }
     if(pkt->data!=NULL){
         free(pkt->data);
+        pkt->data = NULL;
     }
     return SAVED_OP_OK;
 }

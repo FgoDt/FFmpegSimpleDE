@@ -19,6 +19,7 @@ typedef struct SAVEDDecoderContext {
 
     AVCodecContext *actx; //audio
     AVCodecContext *vctx; //video
+    AVCodecContext *vdctx; //video default context
     AVCodecContext *sctx; //sub
 
     AVRational a_time_base;
@@ -33,6 +34,8 @@ typedef struct SAVEDDecoderContext {
     double decpts;
 
     AVFrame *iadst_frame; //audio dst frame;
+
+    int use_default_codec;
 
     SAVEDVideoScaleCtx *videoScaleCtx;
     SAVEDAudioResampleCtx *audioResampleCtx;

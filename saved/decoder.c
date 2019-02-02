@@ -129,6 +129,10 @@ void saved_decoder_close(SAVEDDecoderContext *ictx){
         free(ictx->hw_name);
         ictx->hw_name = NULL;
     }
+    if(ictx->vdctx){
+        avcodec_close(ictx->vdctx);
+        avcodec_free_context(&ictx->vdctx);
+    }
     free(ictx);
 }
 
@@ -198,6 +202,8 @@ static  int set_audio_resample(SAVEDDecoderContext *ctx){
 
 }
 
+
+
 int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audiostream, AVStream *videostream, AVStream *substream) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
 
@@ -206,10 +212,11 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
     AVStream *vstream = videostream;
     AVCodec *acodec = NULL;
     AVCodec *vcodec = NULL;
-
+    ictx->use_default_codec = 0;
     //create audio decoder
     if (astream) {
         savctx->actx = avcodec_alloc_context3(NULL);
+
         if ((avcodec_parameters_to_context(savctx->actx, astream->codecpar)) < 0) {
             SAVLOGE("can't parse par to context");
             return SAVED_E_AVLIB_ERROR;
@@ -227,7 +234,12 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
     //create video decoder
     if (vstream) {
         savctx->vctx = avcodec_alloc_context3(NULL);
+        savctx->vdctx = avcodec_alloc_context3(NULL);
         if ((avcodec_parameters_to_context(savctx->vctx, vstream->codecpar)) < 0) {
+            SAVLOGE("can't parse par to context");
+            return SAVED_E_AVLIB_ERROR;
+        }
+        if ((avcodec_parameters_to_context(savctx->vdctx, vstream->codecpar)) < 0) {
             SAVLOGE("can't parse par to context");
             return SAVED_E_AVLIB_ERROR;
         }
@@ -292,6 +304,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
         savctx->use_hw = 1;
         //end test
 
+
         //use hardware
         if (savctx->use_hw) {
             enum AVHWDeviceType hwdevice;
@@ -322,6 +335,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
             if(hwname != NULL){
                savctx->hw_name =(char*)malloc(strlen(hwname)+1);
+               savctx->hw_name[strlen(hwname)]=0;
                memcpy(savctx->hw_name, hwname, strlen(hwname));
 
                hwdevice = av_hwdevice_find_type_by_name(hwname);
@@ -374,7 +388,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
             }
 
 
-            void *temp = savctx->vctx->get_format;
+
             savctx->vctx->pix_fmt = hwpixfmt;
             savctx->vctx->get_format = saved_get_hw_format;
 
@@ -389,7 +403,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
                     av_buffer_unref(&savctx->hw_bufferref);
                 savctx->use_hw = 0;
                 savctx->vctx->pix_fmt= AV_PIX_FMT_YUV420P;
-                savctx->vctx->get_format = temp;
+                savctx->vctx->get_format = savctx->vdctx->get_format;
             }
 
         }
@@ -403,6 +417,10 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
     }
 
     if (vcodec != NULL && 0 != avcodec_open2(savctx->vctx, vcodec, NULL)) {
+        SAVLOGE("video codec open error");
+    }
+
+    if (vcodec != NULL && 0 != avcodec_open2(savctx->vdctx, vcodec, NULL)) {
         SAVLOGE("video codec open error");
     }
 
@@ -444,11 +462,22 @@ int static saved_decode_video(SAVEDDecoderContext *ictx, AVPacket *pkt) {
         SAVLOGE("pkt is NULL");
         return  SAVED_E_USE_NULL;
     }
-    int ret = avcodec_send_packet(ictx->vctx,pkt);
+    int ret = 0;
+    if (!ictx->use_default_codec ) {
+      ret =  avcodec_send_packet(ictx->vctx, pkt);
+    }else{
+       ret = avcodec_send_packet(ictx->vdctx,pkt);
+    }
+
     if(ret == AVERROR(EAGAIN)){
       //  SAVLOGD("need more data to decode\n");
     }
-    if(ret == 0){
+    if(ret != 0 && ictx->use_hw == 1){
+        ictx->use_hw = 0;
+        ictx->videoScaleCtx->usehw = 0;
+        ret = avcodec_send_packet(ictx->vdctx,pkt);
+        ictx->use_default_codec = 1;
+
     }
     return  ret;
 }
