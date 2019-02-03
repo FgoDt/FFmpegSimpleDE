@@ -68,9 +68,9 @@ void saved_logp(void *ctx, int level,const char *file, const char *func, const c
     fmtstr = fmt;
     va_list args;
     va_start(args, fmtstr);
-    va_end(args);
-
     vsnprintf(str + tstrLen + 4, +MAXLOGSTRLEN - 1, fmt, args);
+	va_end(args);
+
 
     printf("%s\n", str);
 

@@ -101,6 +101,11 @@ void saved_decoder_close(SAVEDDecoderContext *ictx){
    //     free(ictx->picswbuf);
    // }
 
+	if (ictx->vdctx) {
+		avcodec_close(ictx->vdctx);
+		avcodec_free_context(&ictx->vdctx);
+	}
+
     if(ictx->vctx){
         avcodec_close(ictx->vctx);
         avcodec_free_context(&ictx->vctx);
@@ -300,9 +305,8 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 #endif
 
 
-        //test code
+		//defualt use hardware decoder
         savctx->use_hw = 1;
-        //end test
 
 
         //use hardware
