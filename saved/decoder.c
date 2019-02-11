@@ -513,7 +513,10 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
             codecContext = ictx->actx;
             break;
         case AVMEDIA_TYPE_VIDEO:
+            if(ictx->use_default_codec !=1)
             codecContext = ictx->vctx;
+            else
+                codecContext = ictx->vdctx;
             break;
         case AVMEDIA_TYPE_SUBTITLE:
             codecContext = ictx->sctx;
