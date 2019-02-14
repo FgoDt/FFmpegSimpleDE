@@ -7,6 +7,10 @@
 #include<time.h>
 #include <string.h>
 
+#if __ANDROID_NDK__
+
+#include <android/log.h>
+#endif
 
 #define MAXLOGSTRLEN  1024
 
@@ -49,28 +53,42 @@ void saved_logp(void *ctx, int level,const char *file, const char *func, const c
     size_t tstrLen = strlen(timestr);
     tstrLen = tstrLen > MAXLOGSTRLEN - tstrLen ? MAXLOGSTRLEN - tstrLen : tstrLen;
     memcpy(str, timestr, tstrLen);
+#if __ANDROID_NDK__
+    int android_leve = 0;
+#endif
     switch (level)
     {
     case 0:
         memcpy(str + tstrLen, "[E] ", 4);
+#if __ANDROID_NDK__
+        android_leve = ANDROID_LOG_ERROR;
+#endif
         break;
     case 1:
         memcpy(str + tstrLen, "[W] ", 4);
+#if __ANDROID_NDK__
+            android_leve = ANDROID_LOG_WARN;
+#endif
         break;
     case 2:
         memcpy(str + tstrLen, "[D] ", 4);
+#if __ANDROID_NDK__
+            android_leve = ANDROID_LOG_DEBUG;
+#endif
         break;
     default:
         memcpy(str + tstrLen, "[D] ", 4);
+#if __ANDROID_NDK__
+            android_leve = ANDROID_LOG_INFO;
+#endif
         break;
     }
 
     fmtstr = fmt;
     va_list args;
     va_start(args, fmtstr);
-    va_end(args);
-
     vsnprintf(str + tstrLen + 4, +MAXLOGSTRLEN - 1, fmt, args);
+    va_end(args);
 
     printf("%s\n", str);
 
@@ -78,6 +96,10 @@ void saved_logp(void *ctx, int level,const char *file, const char *func, const c
 
 
 #endif // windows
+
+#if __ANDROID_NDK__
+    __android_log_print(android_leve,"SAVED4A","*********SAVED4A*********\r\n%s\n",str);
+#endif
 
 free(fmt);
 

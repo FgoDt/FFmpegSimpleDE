@@ -284,7 +284,6 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
         vcodec = MCCodec;
 
 
-        skip_mc:
 #endif
 
 
@@ -397,6 +396,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
     }
 
+    skip_mc:
 
     if (acodec != NULL && 0 != avcodec_open2(savctx->actx, acodec, NULL)) {
         SAVLOGE("audio codec open error");
