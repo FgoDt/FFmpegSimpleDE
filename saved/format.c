@@ -65,6 +65,7 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
 
     RETIFNULL(path) SAVED_E_USE_NULL;
 
+   // ctx->fmt->probesize = 102400;
 
     if (avformat_open_input(&ctx->fmt, path, NULL, NULL) < 0) {
         SAVLOGE("open input error");

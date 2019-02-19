@@ -295,11 +295,15 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
         if (MCCodec == NULL) {
             SAVLOGW("can't nopen android mediacodec ");
-            goto skip_mc;    
+            goto skip_mc;
         }
 
         vcodec = MCCodec;
+        //savctx->vctx->codec_id = MCCodec->id;
 
+#if __ANDROID_NDK__
+        goto skip_mc;
+#endif
 
 #endif
 
