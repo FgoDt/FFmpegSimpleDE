@@ -5,6 +5,7 @@
 #include "define.h"
 #include "saved.h"
 #include "videoscale.h"
+#include <libavutil/time.h>
 
 #ifdef  __ANDROID_NDK__
 #include <jni.h>
@@ -89,8 +90,10 @@ void saved_decoder_close(SAVEDDecoderContext *ictx){
     }
     if(ictx->isrc_frame)
         av_frame_free(&ictx->isrc_frame);
+#if !__ANDROID_NDK__
     if(ictx->idst_frame)
         av_frame_free(&ictx->idst_frame);
+#endif
     if(ictx->videoScaleCtx){
         saved_video_scale_close(ictx->videoScaleCtx);
     }
@@ -157,7 +160,11 @@ static  int set_video_scale(SAVEDDecoderContext *ctx){
         saved_video_scale_set_picpar(ctx->videoScaleCtx->src,AV_PIX_FMT_NV12,ctx->vctx->height,ctx->vctx->width);
     }
     //default output pix format yuv420p
+#if __ANDROID_NDK__
+    saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height,ctx->vctx->width);
+#else
     saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ceil(ctx->vctx->height/32)*32,ceil(ctx->vctx->width/32)*32);
+#endif
     int ret = saved_video_scale_open(ctx->videoScaleCtx);
     ctx->idst_frame->format = ctx->videoScaleCtx->tgt->fmt;
     ctx->idst_frame->width = ctx->videoScaleCtx->tgt->width;
@@ -267,10 +274,12 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
         AVCodec *MCCodec = NULL;
         char *codec_name = NULL;
+        char *mime = NULL;
         switch (savctx->vctx->codec_id)
         {
         case AV_CODEC_ID_H264:
             codec_name = "h264_mediacodec";
+            mime = "video/avc";
             break;
         case AV_CODEC_ID_HEVC:
             codec_name = "hevc_mediacodec";
@@ -420,6 +429,7 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
 
     skip_mc:
 
+
     if (acodec != NULL && 0 != avcodec_open2(savctx->actx, acodec, NULL)) {
         SAVLOGE("audio codec open error");
     }
@@ -433,8 +443,9 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
     }
 
 
-    if(vstream)
+    if(vstream) {
         set_video_scale(ictx);
+    }
     if(astream)
         set_audio_resample(ictx);
 
@@ -536,7 +547,25 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
 
     //video sws
     if(ret == 0 && type == AVMEDIA_TYPE_VIDEO){
+        long long time =av_gettime();
+#if __ANDROID_NDK__
+        if(ictx->isrc_frame->format == AV_PIX_FMT_NV12 && ictx->idst_frame->format != AV_PIX_FMT_NV12){
+            av_frame_unref(ictx->idst_frame);
+            av_frame_free(&ictx->idst_frame);
+            ictx->idst_frame = NULL;
+        }
+        if(ictx->isrc_frame->format == AV_PIX_FMT_NV12 ||
+            ictx->isrc_frame->format ==  AV_PIX_FMT_YUV420P){
+            ictx->idst_frame = ictx->isrc_frame;
+        } else{
+            ret = saved_video_scale(ictx->videoScaleCtx,ictx->isrc_frame,ictx->idst_frame);
+        }
+
+#else
         ret = saved_video_scale(ictx->videoScaleCtx,ictx->isrc_frame,ictx->idst_frame);
+#endif
+        time = av_gettime() - time;
+        //SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"sws use time %lld",time);
         SAVEDPicPar *par = ictx->videoScaleCtx->tgt;
         f->format  = par->fmt;
         f->width = par->width;

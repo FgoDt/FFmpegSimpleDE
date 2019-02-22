@@ -14,6 +14,9 @@ typedef struct SAVEDAndroidData{
 
 SAVEDAndroidData *saved_android_data_alloc();
 void saved_set_jvm(JavaVM *vm);
+JavaVM* saved_get_jvm();
+void saved_set_gsurface(jobject);
+jobject saved_get_gsurface();
 void saved_android_data_free(SAVEDAndroidData* ctx);
 
 #endif //SAVED_ANDROID_UTILS_H

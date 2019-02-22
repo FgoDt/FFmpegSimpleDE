@@ -133,18 +133,29 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
         if(ret == SAVED_OP_OK && f->type == SAVED_MEDIA_TYPE_VIDEO){
             int yuvsize = ictx->decoderctx->videoScaleCtx->tgt->width * ictx->decoderctx->videoScaleCtx->tgt->height * 1.5;
 
-            if(f->data == NULL){
-                f->data = (unsigned char*)malloc(yuvsize);
-            }
             int ysize = yuvsize/1.5;
+            if(ictx->decoderctx->idst_frame->format == AV_PIX_FMT_YUV420P){
+                if(f->data == NULL){
+                    f->data = (unsigned char*)malloc(yuvsize);
+                }
             memcpy(f->data,ictx->decoderctx->idst_frame->data[0],ysize);
             memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],ysize/4);
             memcpy(f->data+(int)(ysize*1.25),ictx->decoderctx->idst_frame->data[2],ysize/4);
+            } else if(ictx->decoderctx->idst_frame->format == AV_PIX_FMT_NV12){
+                ysize = ictx->decoderctx->idst_frame->linesize[0]*ictx->decoderctx->idst_frame->height;
+                if(f->data == NULL){
+                    f->data = (unsigned char*)malloc(ysize*1.5);
+                }
+                memcpy(f->data,ictx->decoderctx->idst_frame->data[0],ysize);
+                memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],ysize/2);
+            } else{
+                //fixme
+            }
             //printf("video src pts:%ld\n",ictx->decoderctx->isrc_frame->pts);
             f->pts = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pts;
             ictx->decoderctx->decpts = f->pts;
             f->duration = av_q2d(ictx->decoderctx->v_time_base)* ictx->decoderctx->isrc_frame->pkt_duration;
-            f->fmt  = ictx->decoderctx->videoScaleCtx->tgt->fmt;
+            f->fmt  = ictx->decoderctx->idst_frame->format;
             f->width = ictx->decoderctx->videoScaleCtx->tgt->width;
             f->height = ictx->decoderctx->videoScaleCtx->tgt->height;
             f->size = yuvsize;

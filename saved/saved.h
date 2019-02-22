@@ -18,6 +18,8 @@ typedef enum SAVEDMEDIA_TYPE {
 typedef struct SAVEDAudioPar SAVEDAudioPar;
 typedef struct SAVEDPicPar SAVEDPicPar;
 typedef struct SAVEDInternalContext SAVEDInternalContex;
+typedef struct AVFrame AVFrame;
+typedef struct AVPacket AVPacket;
 
 typedef struct SAVEDContext {
     struct SAVEDInternalContext *ictx;
@@ -33,7 +35,7 @@ typedef struct{
     unsigned char * data;
     int size;
 
-    void *internalPkt;//ffmpeg avpacket
+    AVPacket *internalPkt;//ffmpeg avpacket
     int useinternal;//1 for use internaldata
 }SAVEDPkt;
 
@@ -51,7 +53,7 @@ typedef struct{
     int width;
     int height;
     int linesize[8];
-    void *internalframe;//ffmpeg avframe
+    AVFrame *internalframe;//ffmpeg avframe
     int useinternal;// 1 for use internaldata
 }SAVEDFrame;
 

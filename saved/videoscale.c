@@ -59,6 +59,7 @@ int saved_video_scale(SAVEDVideoScaleCtx *ctx, AVFrame *src, AVFrame *dst){
 
     int ret = SAVED_E_UNDEFINE;
 
+
     if((src->format != ctx->src->fmt ||
             src->width != ctx->src->width ||
             src->height != ctx->src->height)&&ctx->usehw == 0 ||

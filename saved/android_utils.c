@@ -8,7 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static  JavaVM  *SAVED_JAVA_VM;
+static JavaVM *SAVED_JAVA_VM;
+static jobject SAVED_G_SURFACE_OBJ;
 SAVEDAndroidData *saved_android_data_alloc(){
     SAVEDAndroidData *data = (SAVEDAndroidData*)malloc(sizeof(SAVEDAndroidData));
     memset(data,0, sizeof(SAVEDAndroidData));
@@ -18,6 +19,15 @@ SAVEDAndroidData *saved_android_data_alloc(){
 void saved_set_jvm(JavaVM *vm){
     SAVED_JAVA_VM = vm;
     av_jni_set_java_vm(vm,NULL);
+}
+JavaVM* saved_get_jvm(){
+    return SAVED_JAVA_VM;
+}
+void saved_set_gsurface(jobject gsruface){
+    SAVED_G_SURFACE_OBJ = gsruface;
+}
+jobject saved_get_gsurface(){
+    return SAVED_G_SURFACE_OBJ;
 }
 void saved_android_data_free(SAVEDAndroidData* ctx){
     RETIFNULL(ctx);
