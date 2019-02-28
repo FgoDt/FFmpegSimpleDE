@@ -3,13 +3,20 @@
 
 #include "saved.h"
 #include "define.h"
+#include "../../deps/ffmpeg/android/a19x86/include/libavformat/avformat.h"
 #include <libavformat/avformat.h>
 
 #define  MAX_STREAMS 10
 
+#define SAVED_FORMAT_FORCE_CLOSE -2
+#define SAVED_FORMAT_OPEN_ERROR -1
+#define SAVED_FORMAT_TRY_OPEN 0
+#define SAVED_FORMAT_OPENING 1
+#define SAVED_FORMAT_OPEN 2
 
 typedef struct SAVEDFormat {
     AVFormatContext *fmt;
+    AVInputFormat *iformat;
     AVStream *astream; //best_audio stream;
     AVStream *vstream; //best video stream;
     AVStream *sstream; //best sub stream
@@ -18,6 +25,7 @@ typedef struct SAVEDFormat {
     int best_video_index;
     int is_write_header;
     double start_pts;
+    int flag;
 }SAVEDFormat;
 
 SAVEDFormat *saved_format_alloc();

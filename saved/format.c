@@ -3,6 +3,8 @@
 #include <libavformat/avformat.h>
 #include "log.h"
 #include "saved.h"
+#include "../../deps/ffmpeg/android/a19x86/include/libavformat/avformat.h"
+#include "../../deps/ffmpeg/android/a19armMC/include/libavutil/error.h"
 
 SAVEDFormat* saved_format_alloc() {
     SAVEDFormat* fmt = (SAVEDFormat*)malloc(sizeof(SAVEDFormat));
@@ -24,6 +26,14 @@ SAVEDFormat* saved_format_alloc() {
 
 int saved_format_close(SAVEDFormat *fmt){
     RETIFNULL(fmt) SAVED_E_USE_NULL;
+    if(fmt->flag == SAVED_FORMAT_OPENING){
+        fmt->flag = SAVED_FORMAT_FORCE_CLOSE;
+    }
+    while(fmt->flag == SAVED_FORMAT_TRY_OPEN ||
+    fmt->flag == SAVED_FORMAT_OPENING ||
+    fmt->flag ==SAVED_FORMAT_FORCE_CLOSE ){
+        usleep(10*1000);
+    }
 
     if(fmt->fmt){
         if(fmt->is_write_header){
@@ -50,10 +60,18 @@ int saved_format_close(SAVEDFormat *fmt){
     return  SAVED_OP_OK;
 }
 
+int static av_interrrupt_callback(void *data){
+    SAVEDFormat * ctx = (SAVEDFormat *)data;
+    if(ctx->flag == SAVED_FORMAT_FORCE_CLOSE){
+        return AVERROR_EXIT;
+    }
+    return SAVED_OP_OK;
+}
 
 int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *options) {
     RETIFNULL(ctx) SAVED_E_USE_NULL;
 
+    ctx->flag = SAVED_FORMAT_TRY_OPEN;
 
 #if(LIBAVFORMAT_VERSION_MAJOR<59)
         av_register_all();
@@ -65,12 +83,21 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
 
     RETIFNULL(path) SAVED_E_USE_NULL;
 
-   // ctx->fmt->probesize = 102400;
+    ctx->fmt->interrupt_callback.callback = av_interrrupt_callback;
+    ctx->fmt->interrupt_callback.opaque = ctx;
 
+
+    ctx->flag = SAVED_FORMAT_OPENING;
     if (avformat_open_input(&ctx->fmt, path, NULL, NULL) < 0) {
         SAVLOGE("open input error");
+        ctx->flag = SAVED_FORMAT_OPEN_ERROR;
         return SAVED_E_AVLIB_ERROR;
     }
+    if(ctx->flag == SAVED_FORMAT_FORCE_CLOSE ){
+        ctx->flag = SAVED_FORMAT_OPEN_ERROR;
+        return SAVED_E_AVLIB_ERROR;
+    }
+    ctx->flag = SAVED_FORMAT_OPEN;
 
 
     if (avformat_find_stream_info(ctx->fmt, NULL) < 0) {

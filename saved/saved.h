@@ -106,6 +106,8 @@ int saved_get_video_par(SAVEDContext *ctx,int *w, int *h, int *fmt);
 
 int saved_seek(SAVEDContext *ctx,double pts);
 
+int saved_get_duration(SAVEDContext *ctx, double *duration);
+
 
 int test();
 

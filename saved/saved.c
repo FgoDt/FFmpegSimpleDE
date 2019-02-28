@@ -289,6 +289,17 @@ int saved_seek(SAVEDContext *ctx,double pts){
     return  ret;
 };
 
+int saved_get_duration(SAVEDContext *ctx, double *duration){
+    RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
+    *duration = -1;
+    if(ctx->ictx!=NULL && ctx->ictx->fmt!= NULL &&
+        ctx->ictx->fmt->fmt != NULL){
+        if(ctx->ictx->fmt->fmt->nb_streams>0){
+            *duration = av_q2d(ctx->ictx->fmt->fmt->streams[0]->time_base)*ctx->ictx->fmt->fmt->streams[0]->duration;
+        }
+    }
+    return SAVED_OP_OK;
+}
 
 #else
 
