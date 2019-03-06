@@ -37,6 +37,7 @@
 #define SAVED_E_AVLIB_ERROR -1
 #define SAVED_E_NO_MEM  -2
 #define SAVED_E_NO_MEDIAFILE -3
+#define SAVED_E_EOF -5
 #define SAVED_E_USE_NULL -255
 #define SAVED_E_FATAL -0xfff
 #define SAVED_E_UNDEFINE -0xffff
