@@ -3,7 +3,6 @@
 
 #include "saved.h"
 #include "define.h"
-#include "../../deps/ffmpeg/android/a19x86/include/libavformat/avformat.h"
 #include <libavformat/avformat.h>
 
 #define  MAX_STREAMS 10

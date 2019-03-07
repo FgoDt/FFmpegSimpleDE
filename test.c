@@ -11,7 +11,7 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fftest/b.mp4";
+        url = "/home/fftest/cs.mp4";
     }
 
 

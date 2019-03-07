@@ -3,8 +3,7 @@
 #include <libavformat/avformat.h>
 #include "log.h"
 #include "saved.h"
-#include "../../deps/ffmpeg/android/a19x86/include/libavformat/avformat.h"
-#include "../../deps/ffmpeg/android/a19armMC/include/libavutil/error.h"
+#include <libavutil/error.h>
 
 SAVEDFormat* saved_format_alloc() {
     SAVEDFormat* fmt = (SAVEDFormat*)malloc(sizeof(SAVEDFormat));
