@@ -3,8 +3,7 @@
 #include <libavformat/avformat.h>
 #include "log.h"
 #include "saved.h"
-#include "../../deps/ffmpeg/android/a19x86/include/libavformat/avformat.h"
-#include "../../deps/ffmpeg/android/a19armMC/include/libavutil/error.h"
+#include <libavutil/error.h>
 
 SAVEDFormat* saved_format_alloc() {
     SAVEDFormat* fmt = (SAVEDFormat*)malloc(sizeof(SAVEDFormat));
@@ -148,6 +147,48 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     return SAVED_OP_OK;
 }
 
+int saved_format_open_output_with_vpar(SAVEDFormat* ctx, void *encoderContext,AVStream *vstream,const char *path,const char *options){
+    RETIFNULL(ctx) SAVED_E_USE_NULL;
+    RETIFNULL(encoderContext) SAVED_E_USE_NULL;
+    RETIFNULL(path) SAVED_E_USE_NULL;
+
+    SAVEDEncoderContext *enctx = (SAVEDEncoderContext*)encoderContext;
+
+#if LIBAVFORMAT_VERSION_MAJOR < 58
+    av_register_all();
+#endif
+    avformat_network_init();
+
+    // ctx->fmt = avformat_alloc_context();
+    int ret = avformat_alloc_output_context2(&ctx->fmt,NULL,NULL,path);
+    ctx->astream = avformat_new_stream(ctx->fmt,NULL);
+    ctx->vstream = avformat_new_stream(ctx->fmt,NULL);
+
+    if(!(ctx->fmt->flags&AVFMT_NOFILE)){
+        ret = avio_open(&ctx->fmt->pb,path,AVIO_FLAG_WRITE);
+        if(ret<0){
+            SAVLOGE("avio open error may networke error!");
+            return SAVED_E_AVLIB_ERROR;
+        }
+    }
+    ctx->is_write_header = 0;
+
+    if(ctx->astream!=NULL) {
+        AVCodecParameters *parameters = avcodec_parameters_alloc();
+        avcodec_parameters_from_context(parameters,enctx->actx);
+        avcodec_parameters_copy(ctx->astream->codecpar,parameters);
+        avcodec_parameters_free(&parameters);
+    }
+
+    if(ctx->vstream != NULL) {
+
+        avcodec_parameters_copy(ctx->vstream->codecpar,vstream->codecpar);
+        ctx->vstream->time_base = vstream->time_base;
+    }
+
+
+    return ret;
+}
 
 int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char *path, const char *options) {
     RETIFNULL(ctx) SAVED_E_USE_NULL;
@@ -238,6 +279,11 @@ int saved_format_send_pkt(SAVEDFormat *ctx, SAVEDPkt *pkt) {
     }
     AVPacket *ipkt = (AVPacket*)pkt->internalPkt;
     ipkt->stream_index = stream->index;
+    if(pkt->pts != ipkt->pts){
+        ipkt->pts = av_q2d(stream->time_base)*ipkt->pts*1000;
+        ipkt->duration = av_q2d(stream->time_base)*ipkt->duration*1000;
+        ipkt->dts = av_q2d(stream->time_base)*ipkt->dts*1000;
+    }
 
 
     ipkt->pts = av_rescale_q_rnd(ipkt->pts,(AVRational){1,1000},stream->time_base,AV_ROUND_INF|AV_ROUND_PASS_MINMAX);

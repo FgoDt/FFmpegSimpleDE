@@ -109,6 +109,24 @@ int saved_internal_opne_with_par(SAVEDInternalContext *ictx, const char *path, c
     return SAVED_E_UNDEFINE;
 }
 
+int saved_internal_opne_with_vcodec(SAVEDInternalContext *ictx,SAVEDInternalContext *ivctx, const char *path, const char *options,
+                                    int vh, int vw, int vbit_rate,
+                                    int ach, int asample_rate, int abit_rate){
+     if(ictx->isencoder){
+        ictx->savctx = saved_codec_alloc();
+        int ret = saved_codec_open_with_par(ictx->savctx,vh,vw,NULL,vbit_rate,asample_rate,NULL,ach,abit_rate);
+
+        if(path != NULL){
+            ictx->fmt = saved_format_alloc();
+            SAVEDCodecContext *enctx = (SAVEDCodecContext*)ictx->savctx;
+            ret =  saved_format_open_output_with_vpar(ictx->fmt,enctx->encoderctx,ivctx->fmt->vstream,path,options);
+        }
+
+        return ret;
+    }
+
+    return SAVED_E_UNDEFINE;
+}
 
 int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;

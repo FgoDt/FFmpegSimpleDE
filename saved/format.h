@@ -3,7 +3,6 @@
 
 #include "saved.h"
 #include "define.h"
-#include "../../deps/ffmpeg/android/a19x86/include/libavformat/avformat.h"
 #include <libavformat/avformat.h>
 
 #define  MAX_STREAMS 10
@@ -35,6 +34,8 @@ int saved_format_free(SAVEDFormat *fmt);
 int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *options);
 
 int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext,const char *path,const char *options);
+int saved_format_open_output_with_vpar(SAVEDFormat* ctx, void *encoderContext,AVStream *vstream,const char *path,const char *options);
+
 
 int saved_format_open_output_with_par(SAVEDFormat *ctx,int vw, int vh, uint8_t *vextradata, int vextradata_size,
                                                         int ach, int asample_rate, uint8_t *aextradata, int aextradata_size);

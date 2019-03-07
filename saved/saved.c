@@ -63,6 +63,16 @@ int saved_open_with_par(SAVEDContext *ctx, const char *path, const char *options
     int ret = saved_internal_opne_with_par(ctx->ictx,path,options,vh,vw,vbitrate,ach,asample_rate,abitrate);
     return ret;
 }
+int saved_open_with_vcodec(SAVEDContext *ctx,SAVEDContext *vctx, const char *path, const char *options, int isencoder,
+                           int vh, int vw, int vfmt, int vbitrate,
+                           int asample_rate, int ach, int afmt, int abitrate){
+    ctx->ictx = saved_internal_alloc();
+    SAVEDInternalContext *ictx = ctx->ictx;
+    ictx->isencoder = isencoder;
+    int ret = saved_internal_opne_with_vcodec(ctx->ictx,vctx->ictx,path,options,vh,vw,vbitrate,ach,asample_rate,abitrate);
+    return ret;
+
+}
 
 SAVEDPkt* saved_create_pkt() {
     SAVEDPkt *pkt = (SAVEDPkt*)malloc(sizeof(SAVEDPkt));
@@ -299,6 +309,9 @@ int saved_get_duration(SAVEDContext *ctx, double *duration){
         }
     }
     return SAVED_OP_OK;
+}
+
+int saved_set_video_codec(SAVEDContext* ctx,SAVEDContext *vctx){
 }
 
 #else

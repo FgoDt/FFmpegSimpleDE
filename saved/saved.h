@@ -67,6 +67,9 @@ int saved_open(SAVEDContext *ctx, const char *path,const char *options, int isen
 int saved_open_with_par(SAVEDContext *ctx, const char *path, const char *options, int isencoder, 
                                                     int vh, int vw, int vfmt, int vbitrate,
                                                     int asample_rate, int ach, int afmt, int abitrate);
+int saved_open_with_vcodec(SAVEDContext *ctx,SAVEDContext *vctx, const char *path, const char *options, int isencoder,
+                        int vh, int vw, int vfmt, int vbitrate,
+                        int asample_rate, int ach, int afmt, int abitrate);
 
 int saved_close(SAVEDContext *ctx);
 
@@ -107,6 +110,8 @@ int saved_get_video_par(SAVEDContext *ctx,int *w, int *h, int *fmt);
 int saved_seek(SAVEDContext *ctx,double pts);
 
 int saved_get_duration(SAVEDContext *ctx, double *duration);
+
+int saved_set_video_codec(SAVEDContext *ctx, SAVEDContext *src);
 
 
 int test();

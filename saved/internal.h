@@ -37,6 +37,9 @@ int saved_internal_open(SAVEDInternalContext *ictx, const char* path, void *opti
 int saved_internal_opne_with_par(SAVEDInternalContext *ictx, const char *path, const char *options,
                                                                         int vh, int vw, int vbit_rate, 
                                                                         int ach, int asample_rate, int abit_rate);
+int saved_internal_opne_with_vcodec(SAVEDInternalContext *ictx,SAVEDInternalContext *ivctx, const char *path, const char *options,
+                                 int vh, int vw, int vbit_rate,
+                                 int ach, int asample_rate, int abit_rate);
 
 int saved_internal_close(SAVEDInternalContext *ictx);
 
@@ -60,4 +63,4 @@ int saved_internal_get_video_par(SAVEDInternalContext *ictx,int* vw, int* vh, in
 
 int saved_internal_seek(SAVEDInternalContext *ictx,double pts);
 
-#endif 
+#endif
