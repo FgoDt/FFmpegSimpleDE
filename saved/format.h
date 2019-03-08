@@ -12,6 +12,7 @@
 #define SAVED_FORMAT_TRY_OPEN 0
 #define SAVED_FORMAT_OPENING 1
 #define SAVED_FORMAT_OPEN 2
+#define SAVED_FORMAT_RUNING 3
 
 typedef struct SAVEDFormat {
     AVFormatContext *fmt;

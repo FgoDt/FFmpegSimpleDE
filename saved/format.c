@@ -25,12 +25,10 @@ SAVEDFormat* saved_format_alloc() {
 
 int saved_format_close(SAVEDFormat *fmt){
     RETIFNULL(fmt) SAVED_E_USE_NULL;
-    if(fmt->flag == SAVED_FORMAT_OPENING){
+    if(fmt->flag == SAVED_FORMAT_RUNING){
         fmt->flag = SAVED_FORMAT_FORCE_CLOSE;
     }
-    while(fmt->flag == SAVED_FORMAT_TRY_OPEN ||
-    fmt->flag == SAVED_FORMAT_OPENING ||
-    fmt->flag ==SAVED_FORMAT_FORCE_CLOSE ){
+    while(fmt->flag == SAVED_FORMAT_RUNING ){
         usleep(10*1000);
     }
 
@@ -64,6 +62,7 @@ int static av_interrrupt_callback(void *data){
     if(ctx->flag == SAVED_FORMAT_FORCE_CLOSE){
         return AVERROR_EXIT;
     }
+    ctx->flag = SAVED_FORMAT_RUNING;
     return SAVED_OP_OK;
 }
 
