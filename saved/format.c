@@ -26,14 +26,15 @@ SAVEDFormat* saved_format_alloc() {
 int saved_format_close(SAVEDFormat *fmt){
     RETIFNULL(fmt) SAVED_E_USE_NULL;
     if(fmt->flag == SAVED_FORMAT_TRY_GET || fmt->flag == SAVED_FORMAT_TRY_OPEN){
-        fmt->flag = SAVED_FORMAT_FORCE_CLOSE;
+        fmt->sate= SAVED_FORMAT_FORCE_CLOSE;
     }
     while(
     fmt->flag == SAVED_FORMAT_TRY_OPEN ||
-    fmt->flag == SAVED_FORMAT_TRY_GET  ||
-    fmt->flag == SAVED_FORMAT_FORCE_CLOSE){
+    fmt->flag == SAVED_FORMAT_TRY_GET
+    ){
         usleep(10*1000);
     }
+
 
     if(fmt->fmt){
         if(fmt->is_write_header){
@@ -62,7 +63,7 @@ int saved_format_close(SAVEDFormat *fmt){
 
 int static av_interrrupt_callback(void *data){
     SAVEDFormat * ctx = (SAVEDFormat *)data;
-    if(ctx->flag == SAVED_FORMAT_FORCE_CLOSE){
+    if(ctx->sate == SAVED_FORMAT_FORCE_CLOSE){
         return AVERROR_EXIT;
     }
     return SAVED_OP_OK;
@@ -96,17 +97,18 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
         ctx->flag = SAVED_FORMAT_OPEN_ERROR;
         return SAVED_E_AVLIB_ERROR;
     }
-    ctx->flag = SAVED_FORMAT_OPEN;
 
 
     if (avformat_find_stream_info(ctx->fmt, NULL) < 0) {
         SAVLOGE("can not find stream info");
+        ctx->flag = SAVED_FORMAT_OPEN_ERROR;
         return SAVED_E_AVLIB_ERROR;
     }
 
     if (ctx->fmt->nb_streams<0)
     {
         SAVLOGE("streams nb < 0");
+        ctx->flag = SAVED_FORMAT_OPEN_ERROR;
         return SAVED_E_AVLIB_ERROR;
     }
 
@@ -142,8 +144,10 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
     }
 
     if (ctx->best_video_index < 0 && ctx->best_audio_index < 0) {
+        ctx->flag = SAVED_FORMAT_OPEN_ERROR;
         return SAVED_E_NO_MEDIAFILE;
     }
+    ctx->flag = SAVED_FORMAT_OPEN;
     return SAVED_OP_OK;
 }
 
@@ -160,9 +164,12 @@ int saved_format_open_output_with_vpar(SAVEDFormat* ctx, void *encoderContext,AV
     avformat_network_init();
 
     // ctx->fmt = avformat_alloc_context();
+    ctx->flag = SAVED_FORMAT_TRY_OPEN;
+    ctx->isencoder = 1;
     int ret = avformat_alloc_output_context2(&ctx->fmt,NULL,NULL,path);
     if(ret < 0){
         SAVLOGE("alloc output context2 error ");
+        ctx->flag = SAVED_FORMAT_OPEN_ERROR;
         return SAVED_E_AVLIB_ERROR;
     }
     ctx->astream = avformat_new_stream(ctx->fmt,NULL);
@@ -172,6 +179,7 @@ int saved_format_open_output_with_vpar(SAVEDFormat* ctx, void *encoderContext,AV
         ret = avio_open(&ctx->fmt->pb,path,AVIO_FLAG_WRITE);
         if(ret<0){
             SAVLOGE("avio open error may networke error!");
+            ctx->flag = SAVED_FORMAT_OPEN_ERROR;
             return SAVED_E_AVLIB_ERROR;
         }
     }
@@ -191,6 +199,7 @@ int saved_format_open_output_with_vpar(SAVEDFormat* ctx, void *encoderContext,AV
     }
 
 
+    ctx->flag = SAVED_FORMAT_OPEN;
     return ret;
 }
 
@@ -207,6 +216,8 @@ int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char 
     avformat_network_init();
 
    // ctx->fmt = avformat_alloc_context();
+   ctx->isencoder = 1;
+   ctx->flag = SAVED_FORMAT_TRY_OPEN;
     int ret = avformat_alloc_output_context2(&ctx->fmt,NULL,NULL,path);
     ctx->astream = avformat_new_stream(ctx->fmt,NULL);
     ctx->vstream = avformat_new_stream(ctx->fmt,NULL);
@@ -215,6 +226,7 @@ int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char 
         ret = avio_open(&ctx->fmt->pb,path,AVIO_FLAG_WRITE);
         if(ret<0){
             SAVLOGE("avio open error may networke error!");
+            ctx->flag = SAVED_FORMAT_OPEN_ERROR;
             return SAVED_E_AVLIB_ERROR;
         }
     }
@@ -235,6 +247,7 @@ int saved_format_open_output(SAVEDFormat* ctx, void *encoderContext, const char 
         avcodec_parameters_free(&parameters);
     }
 
+    ctx->flag = SAVED_FORMAT_OPEN;
 
     return ret;
 }

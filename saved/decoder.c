@@ -104,6 +104,7 @@ void saved_decoder_close(SAVEDDecoderContext *ictx){
    //     free(ictx->picswbuf);
    // }
 
+
 	if (ictx->vdctx) {
 		avcodec_close(ictx->vdctx);
 		avcodec_free_context(&ictx->vdctx);
@@ -246,15 +247,18 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
     //create video decoder
     if (vstream) {
         savctx->vctx = avcodec_alloc_context3(NULL);
-        savctx->vdctx = avcodec_alloc_context3(NULL);
+        savctx->vdctx = NULL;
         if ((avcodec_parameters_to_context(savctx->vctx, vstream->codecpar)) < 0) {
             SAVLOGE("can't parse par to context");
             return SAVED_E_AVLIB_ERROR;
         }
+#if !__ANDROID_NDK__
+        savctx->vdctx = avcodec_alloc_context3(NULL);
         if ((avcodec_parameters_to_context(savctx->vdctx, vstream->codecpar)) < 0) {
             SAVLOGE("can't parse par to context");
             return SAVED_E_AVLIB_ERROR;
         }
+#endif
         vcodec = avcodec_find_decoder(savctx->vctx->codec_id);
         if (vcodec == NULL) {
             SAVLOGE("can't find decoder for video");
@@ -437,10 +441,11 @@ int saved_decoder_create(SAVEDDecoderContext *ictx,char *chwname,AVStream *audio
     if (vcodec != NULL && 0 != avcodec_open2(savctx->vctx, vcodec, NULL)) {
         SAVLOGE("video codec open error");
     }
-
+#if !__ANDROID_NDK__
     if (vcodec != NULL && 0 != avcodec_open2(savctx->vdctx, vcodec, NULL)) {
         SAVLOGE("video codec open error");
     }
+#endif
 
 
     if(vstream) {

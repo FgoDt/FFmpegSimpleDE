@@ -30,6 +30,8 @@ typedef struct SAVEDFormat {
     int is_write_header;
     double start_pts;
     int flag;
+    int sate;
+    int isencoder;
 }SAVEDFormat;
 
 SAVEDFormat *saved_format_alloc();
