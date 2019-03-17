@@ -4,6 +4,7 @@
 #include "log.h"
 #include "saved.h"
 #include <libavutil/error.h>
+#include <unistd.h>
 
 SAVEDFormat* saved_format_alloc() {
     SAVEDFormat* fmt = (SAVEDFormat*)malloc(sizeof(SAVEDFormat));
@@ -32,6 +33,7 @@ int saved_format_close(SAVEDFormat *fmt){
     fmt->flag == SAVED_FORMAT_TRY_OPEN ||
     fmt->flag == SAVED_FORMAT_TRY_GET
     ){
+        //fixme when use windows sys
         usleep(10*1000);
     }
 

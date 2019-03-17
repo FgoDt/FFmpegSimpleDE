@@ -312,6 +312,7 @@ int saved_get_duration(SAVEDContext *ctx, double *duration){
 }
 
 int saved_set_video_codec(SAVEDContext* ctx,SAVEDContext *vctx){
+    return SAVED_E_UNDEFINE;
 }
 
 #else
