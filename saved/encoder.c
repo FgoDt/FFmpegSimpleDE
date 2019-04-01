@@ -233,7 +233,7 @@ int saved_encoder_send_frame(SAVEDEncoderContext *ctx, SAVEDFrame  *frame){
             }
             AVFrame *iaframe = frame->internalframe;
 
-            test_encoder("dec.pcm",iaframe->nb_samples*av_get_bytes_per_sample(iaframe->format)*iaframe->channels,iaframe->data[0]);
+           // test_encoder("dec.pcm",iaframe->nb_samples*av_get_bytes_per_sample(iaframe->format)*iaframe->channels,iaframe->data[0]);
 
             int fifo_full = 0;
             if(av_audio_fifo_space(ctx->fifo)-av_audio_fifo_size(ctx->fifo)<ret){

@@ -58,9 +58,9 @@ typedef struct{
 }SAVEDFrame;
 
 
-SAVEDContext* saved_create_context();
+SAVEDContext* saved_create_context(void);
 
-int saved_del_context();
+int saved_del_context(void);
 
 int saved_open(SAVEDContext *ctx, const char *path,const char *options, int isencoder );
 
@@ -73,13 +73,13 @@ int saved_open_with_vcodec(SAVEDContext *ctx,SAVEDContext *vctx, const char *pat
 
 int saved_close(SAVEDContext *ctx);
 
-SAVEDPkt* saved_create_pkt();
+SAVEDPkt* saved_create_pkt(void);
 
 int saved_del_pkt(SAVEDPkt *pkt);
 
 int saved_pkt_unref(SAVEDPkt *pkt);
 
-SAVEDFrame* saved_create_frame();
+SAVEDFrame* saved_create_frame(void);
 
 int saved_del_frame(SAVEDFrame *savedFrame);
 
@@ -114,7 +114,7 @@ int saved_get_duration(SAVEDContext *ctx, double *duration);
 int saved_set_video_codec(SAVEDContext *ctx, SAVEDContext *src);
 
 
-int test();
+int test(void);
 
 
 #endif // __SAVED_H__

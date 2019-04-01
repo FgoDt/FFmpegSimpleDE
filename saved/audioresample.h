@@ -22,7 +22,7 @@ typedef struct SAVEDAudioResampleCtx{
     SwrContext  *swrContext;
 }SAVEDAudioResampleCtx;
 
-SAVEDAudioResampleCtx* saved_resample_alloc();
+SAVEDAudioResampleCtx* saved_resample_alloc(void);
 
 int saved_resample_open(SAVEDAudioResampleCtx* ctx);
 
