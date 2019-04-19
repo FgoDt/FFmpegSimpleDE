@@ -131,23 +131,29 @@ int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f) {
     {
         ret = saved_decoder_recive_frame(ictx->decoderctx,f->internalframe,f->type);
         if(ret == SAVED_OP_OK && f->type == SAVED_MEDIA_TYPE_VIDEO){
-            int yuvsize = ictx->decoderctx->videoScaleCtx->tgt->width * ictx->decoderctx->videoScaleCtx->tgt->height * 1.5;
+            int ysize = ictx->decoderctx->idst_frame->linesize[0] * ictx->decoderctx->videoScaleCtx->tgt->height;
 
-            int ysize = yuvsize/1.5;
+            int usize = ictx->decoderctx->idst_frame->linesize[1] *ictx->decoderctx->videoScaleCtx->tgt->height/2;
+            int vsize = ictx->decoderctx->idst_frame->linesize[2] *ictx->decoderctx->videoScaleCtx->tgt->height/2;
+            int yuvsize = ysize+usize+vsize;
+
             if(ictx->decoderctx->idst_frame->format == AV_PIX_FMT_YUV420P){
                 if(f->data == NULL){
                     f->data = (unsigned char*)malloc(yuvsize);
+                    memset(f->data,0,yuvsize);
                 }
             memcpy(f->data,ictx->decoderctx->idst_frame->data[0],ysize);
-            memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],ysize/4);
-            memcpy(f->data+(int)(ysize*1.25),ictx->decoderctx->idst_frame->data[2],ysize/4);
+            memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],usize);
+            memcpy(f->data+(int)(ysize+usize),ictx->decoderctx->idst_frame->data[2],vsize);
             } else if(ictx->decoderctx->idst_frame->format == AV_PIX_FMT_NV12){
                 ysize = ictx->decoderctx->idst_frame->linesize[0]*ictx->decoderctx->idst_frame->height;
+                int uvsize = ictx->decoderctx->idst_frame->linesize[1] *ictx->decoderctx->idst_frame->height;
+                yuvsize = ysize+uvsize;
                 if(f->data == NULL){
-                    f->data = (unsigned char*)malloc(ysize*1.5);
+                    f->data = (unsigned char*)malloc(yuvsize);
                 }
                 memcpy(f->data,ictx->decoderctx->idst_frame->data[0],ysize);
-                memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],ysize/2);
+                memcpy(f->data+ysize,ictx->decoderctx->idst_frame->data[1],uvsize);
             } else{
                 //fixme
             }
