@@ -15,6 +15,32 @@ typedef enum SAVEDMEDIA_TYPE {
     SAVED_MEDIA_TYPE_NB
 }SAVEDMEDIA_TYPE;
 
+typedef enum SAVED_VIDEO_FMT_TYPE {
+	SAVED_VIDEO_FMT_NONE = -1,
+	SAVED_VIDEO_FMT_YUV420P,
+	SAVED_VIDEO_FMT_NV12,
+	SAVED_VIDEO_FMT_RGB
+};
+
+typedef enum SAVED_AUDIO_FMT_TYPE {
+	SAVED_AUDIO_FMT_NONE = -1,
+	SAVED_AUDIO_FMT_U8,          ///< unsigned 8 bits
+	SAVED_AUDIO_FMT_S16,         ///< signed 16 bits
+	SAVED_AUDIO_FMT_S32,         ///< signed 32 bits
+	SAVED_AUDIO_FMT_FLT,         ///< float
+	SAVED_AUDIO_FMT_DBL,         ///< double
+
+	SAVED_AUDIO_FMT_U8P,         ///< unsigned 8 bits, planar
+	SAVED_AUDIO_FMT_S16P,        ///< signed 16 bits, planar
+	SAVED_AUDIO_FMT_S32P,        ///< signed 32 bits, planar
+	SAVED_AUDIO_FMT_FLTP,        ///< float, planar
+	SAVED_AUDIO_FMT_DBLP,        ///< double, planar
+	SAVED_AUDIO_FMT_S64,         ///< signed 64 bits
+	SAVED_AUDIO_FMT_S64P,        ///< signed 64 bits, planar
+
+	SAVED_AUDIO_FMT_NB           ///< Number of sample formats. DO NOT USE if linking dynamically
+};
+
 typedef struct SAVEDAudioPar SAVEDAudioPar;
 typedef struct SAVEDPicPar SAVEDPicPar;
 typedef struct SAVEDInternalContext SAVEDInternalContex;
@@ -93,9 +119,9 @@ int saved_get_frame(SAVEDContext *ctx, SAVEDFrame *f);
 
 int saved_send_frame(SAVEDContext *ctx, SAVEDFrame *f);
 
-int saved_get_frame_raw(SAVEDContext *ctx,unsigned char **data, int linesize[4]);
+int saved_get_frame_raw(const SAVEDFrame *src,unsigned char *data, int linesize[4]);
 
-int saved_get_pkt_raw(SAVEDContext *ctx,unsigned char * data, int size);
+int saved_get_pkt_raw(const SAVEDPkt* src,unsigned char * data, int size);
 
 int saved_get_metadata(SAVEDContext *ctx, char *key, char **val);
 

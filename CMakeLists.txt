@@ -9,8 +9,8 @@ IF(UNIX)
     include_directories("../deps/ffmpeg/linux/include")
     link_directories("../deps/ffmpeg/linux/lib")
 ELSEIF(WIN32)
-    include_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\include")
-    link_directories("E:\\BSP\\BSPWindows\\ffmpeg-3.4-win64-dev\\ffmpeg-3.4-win64-dev\\lib")
+    include_directories("../deps/ffmpeg/WIN32/include")
+    link_directories("../deps/ffmpeg/WIN32/lib")
 ENDIF()
 
 add_definitions("-Wall -g")
@@ -33,11 +33,5 @@ target_link_libraries(
     swscale
     swresample
     avutil
-
-    m
-    pthread
-    x264
-    fdk-aac
-    z
-
+	avdevice
 )

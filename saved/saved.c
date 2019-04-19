@@ -227,26 +227,19 @@ int saved_send_frame(SAVEDContext *ctx, SAVEDFrame *f) {
     return ret;
 }
 
-int saved_get_frame_raw(SAVEDContext *ctx, unsigned char **data, int linesize[4]) {
+int saved_get_frame_raw(const SAVEDFrame *src, unsigned char *data, int linesize[4]) {
     RETIFNULL(data) SAVED_E_USE_NULL;
-
-    SAVEDFrame *f = saved_create_frame();
-    int ret = saved_get_frame(ctx, f);
-    //todo 
-    saved_del_frame(f);
-    return ret;
-
+	RETIFNULL(src) SAVED_E_USE_NULL;
+	int len = 0;
+	for (size_t i = 0; i < 8 && src->data[i] != NULL; i++)
+	{
+		memcpy(data + len, src->data[i], src->linesize[i] * src->height);
+	}
 }
 
-int saved_get_pkt_raw(SAVEDContext *ctx, unsigned char * data, int size) {
-    RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
+int saved_get_pkt_raw(const SAVEDPkt *src, unsigned char * data, int size) {
     RETIFNULL(data) SAVED_E_USE_NULL;
-
-    SAVEDPkt *pkt = saved_create_pkt();
-    int ret = saved_get_pkt(ctx, pkt);
-    //todo
-    saved_del_pkt(pkt);
-    return ret;
+	RETIFNULL(src) SAVED_E_USE_NULL;
 }
 
 int saved_close(SAVEDContext *ctx){

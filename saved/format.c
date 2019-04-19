@@ -4,7 +4,11 @@
 #include "log.h"
 #include "saved.h"
 #include <libavutil/error.h>
+#include <libavdevice/avdevice.h>
+
+#if !(WIN64 || WIN32)
 #include <unistd.h>
+#endif
 
 SAVEDFormat* saved_format_alloc() {
     SAVEDFormat* fmt = (SAVEDFormat*)malloc(sizeof(SAVEDFormat));
@@ -33,8 +37,11 @@ int saved_format_close(SAVEDFormat *fmt){
     fmt->flag == SAVED_FORMAT_TRY_OPEN ||
     fmt->flag == SAVED_FORMAT_TRY_GET
     ){
-        //fixme when use windows sys
+#if (WIN32 || WIN64)
+		_sleep(10);
+#else
         usleep(10*1000);
+#endif
     }
 
 
@@ -71,6 +78,13 @@ int static av_interrrupt_callback(void *data){
     return SAVED_OP_OK;
 }
 
+int saved_format_froce_input(SAVEDFormat *ctx, const char *fmt) {
+	RETIFNULL(ctx) SAVED_E_USE_NULL;
+	RETIFNULL(fmt) SAVED_E_USE_NULL;
+	ctx->iformat = av_find_input_format(fmt);
+	return SAVED_OP_OK;
+}
+
 int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *options) {
     RETIFNULL(ctx) SAVED_E_USE_NULL;
 
@@ -82,13 +96,15 @@ int saved_format_open_input(SAVEDFormat* ctx,const char *path, const char *optio
 
     avformat_network_init();
 
+	avdevice_register_all();
+	
+
     ctx->fmt = avformat_alloc_context();
 
     RETIFNULL(path) SAVED_E_USE_NULL;
 
     ctx->fmt->interrupt_callback.callback = av_interrrupt_callback;
     ctx->fmt->interrupt_callback.opaque = ctx;
-
 
     if (avformat_open_input(&ctx->fmt, path, NULL, NULL) < 0) {
         SAVLOGE("open input error");
