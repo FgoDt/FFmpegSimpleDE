@@ -80,6 +80,8 @@ SAVEDDecoderContext* saved_decoder_alloc() {
     savctx->ipkt = av_packet_alloc();
     savctx->isrc_frame = av_frame_alloc();
     savctx->idst_frame = av_frame_alloc();
+    savctx->video_scale_ctx = saved_video_scale_alloc();
+    savctx->audio_resample_ctx = saved_resample_alloc();
     return savctx;
 }
 void saved_decoder_close(SAVEDDecoderContext *ictx){
@@ -94,11 +96,11 @@ void saved_decoder_close(SAVEDDecoderContext *ictx){
     if(ictx->idst_frame)
         av_frame_free(&ictx->idst_frame);
 #endif
-    if(ictx->videoScaleCtx){
-        saved_video_scale_close(ictx->videoScaleCtx);
+    if(ictx->video_scale_ctx){
+        saved_video_scale_close(ictx->video_scale_ctx);
     }
-    if(ictx->audioResampleCtx){
-        saved_resample_close(ictx->audioResampleCtx);
+    if(ictx->audio_resample_ctx){
+        saved_resample_close(ictx->audio_resample_ctx);
     }
    // if(ictx->picswbuf){
    //     free(ictx->picswbuf);
@@ -152,24 +154,33 @@ int saved_decoder_init(SAVEDDecoderContext *ictx, SAVEDFormat *fmt, char *hwname
 static  int set_video_scale(SAVEDDecoderContext *ctx){
     RETIFNULL(ctx)SAVED_E_USE_NULL;
     RETIFNULL(ctx->vctx) SAVED_E_USE_NULL;
-    ctx->videoScaleCtx = saved_video_scale_alloc();
-    RETIFNULL(ctx->videoScaleCtx) SAVED_E_NO_MEM;
+    RETIFNULL(ctx->video_scale_ctx) SAVED_E_NO_MEM;
 
-    saved_video_scale_set_picpar(ctx->videoScaleCtx->src,ctx->vctx->pix_fmt,ctx->vctx->height,ctx->vctx->width);
-    ctx->videoScaleCtx->usehw = ctx->use_hw;
+    ctx->video_scale_ctx->usehw = ctx->use_hw;
     if(ctx->use_hw){
-        saved_video_scale_set_picpar(ctx->videoScaleCtx->src,AV_PIX_FMT_NV12,ctx->vctx->height,ctx->vctx->width);
-    }
-    //default output pix format yuv420p
-#if __ANDROID_NDK__
-    saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height,ctx->vctx->width);
-#else
-    saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,ceil(ctx->vctx->height/32)*32,ceil(ctx->vctx->width/32)*32);
-#endif
-    int ret = saved_video_scale_open(ctx->videoScaleCtx);
-    ctx->idst_frame->format = ctx->videoScaleCtx->tgt->fmt;
-    ctx->idst_frame->width = ctx->videoScaleCtx->tgt->width;
-    ctx->idst_frame->height = ctx->videoScaleCtx->tgt->height;
+		//ffmpeg hardware decoder format is nv12
+        saved_video_scale_set_par(ctx->video_scale_ctx->src,AV_PIX_FMT_NV12,ctx->vctx->height,ctx->vctx->width);
+	}
+	else
+	{
+		saved_video_scale_set_par(ctx->video_scale_ctx->src,ctx->vctx->pix_fmt,ctx->vctx->height,ctx->vctx->width);
+	}
+
+	if (ctx->force_video_par.height>0)
+	{
+		saved_video_scale_set_par(ctx->video_scale_ctx->tgt, ctx->force_video_par.fmt, ctx->force_video_par.height, ctx->force_video_par.width);
+	}
+	else{
+		if (ctx->use_hw)
+		{
+			saved_video_scale_set_par(ctx->video_scale_ctx->tgt, AV_PIX_FMT_NV12, ctx->vctx->height, ctx->vctx->width);
+		}else
+			saved_video_scale_set_par(ctx->video_scale_ctx->tgt,AV_PIX_FMT_YUV420P,ctx->vctx->height ,ctx->vctx->width );
+	}
+    int ret = saved_video_scale_open(ctx->video_scale_ctx);
+    ctx->idst_frame->format = ctx->video_scale_ctx->tgt->fmt;
+    ctx->idst_frame->width = ctx->video_scale_ctx->tgt->width;
+    ctx->idst_frame->height = ctx->video_scale_ctx->tgt->height;
     ret = av_frame_get_buffer(ctx->idst_frame,0);
 
 
@@ -184,14 +195,20 @@ static  int set_audio_resample(SAVEDDecoderContext *ctx){
     RETIFNULL(ctx) SAVED_E_USE_NULL;
     RETIFNULL(ctx->actx) SAVED_E_USE_NULL;
 
-    ctx->audioResampleCtx = saved_resample_alloc();
-    RETIFNULL(ctx->audioResampleCtx) SAVED_E_NO_MEM;
+    RETIFNULL(ctx->audio_resample_ctx) SAVED_E_NO_MEM;
 
-   int ret =  saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_S16,2,44100);
+	int ret = 0;
+	if (ctx->force_audio_par.ch > 0) {
+		ret = saved_resample_set_par(ctx->audio_resample_ctx->tgt, ctx->force_audio_par.fmt, ctx->force_audio_par.ch, ctx->force_audio_par.sample);
+	}
+	else
+	{
+		ret = saved_resample_set_par(ctx->audio_resample_ctx->tgt,AV_SAMPLE_FMT_S16,2,44100);
+	}
 
-   ret |= saved_resample_set_fmtpar(ctx->audioResampleCtx->src,ctx->actx->sample_fmt,ctx->actx->channels,ctx->actx->sample_rate);
+   ret |= saved_resample_set_par(ctx->audio_resample_ctx->src,ctx->actx->sample_fmt,ctx->actx->channels,ctx->actx->sample_rate);
 
-   ret |= saved_resample_open(ctx->audioResampleCtx);
+   ret |= saved_resample_open(ctx->audio_resample_ctx);
 
    if(ret!=SAVED_OP_OK)
        return ret;
@@ -203,10 +220,10 @@ static  int set_audio_resample(SAVEDDecoderContext *ctx){
    ctx->iadst_frame = av_frame_alloc();
    RETIFNULL(ctx->iadst_frame) SAVED_E_USE_NULL;
 
-   ctx->iadst_frame->channels = ctx->audioResampleCtx->tgt->ch;
-   ctx->iadst_frame->channel_layout = ctx->audioResampleCtx->tgt->ch_layout;
-   ctx->iadst_frame->format = ctx->audioResampleCtx->tgt->fmt;
-   ctx->iadst_frame->sample_rate = ctx->audioResampleCtx->tgt->sample;
+   ctx->iadst_frame->channels = ctx->audio_resample_ctx->tgt->ch;
+   ctx->iadst_frame->channel_layout = ctx->audio_resample_ctx->tgt->ch_layout;
+   ctx->iadst_frame->format = ctx->audio_resample_ctx->tgt->fmt;
+   ctx->iadst_frame->sample_rate = ctx->audio_resample_ctx->tgt->sample;
    ctx->iadst_frame->nb_samples = 20480+256;
    av_frame_get_buffer(ctx->iadst_frame,0);
 
@@ -498,7 +515,7 @@ int static saved_decode_video(SAVEDDecoderContext *ictx, AVPacket *pkt) {
     }
     if(ret != 0 && ictx->use_hw == 1){
         ictx->use_hw = 0;
-        ictx->videoScaleCtx->usehw = 0;
+        ictx->video_scale_ctx->usehw = 0;
         ret = avcodec_send_packet(ictx->vdctx,pkt);
         ictx->use_default_codec = 1;
 
@@ -567,11 +584,11 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
         }
 
 #else
-        ret = saved_video_scale(ictx->videoScaleCtx,ictx->isrc_frame,ictx->idst_frame);
+        ret = saved_video_scale(ictx->video_scale_ctx,ictx->isrc_frame,ictx->idst_frame);
 #endif
         time = av_gettime() - time;
         //SAVEDLOG1(NULL,SAVEDLOG_LEVEL_D,"sws use time %lld",time);
-        SAVEDPicPar *par = ictx->videoScaleCtx->tgt;
+        SAVEDVideoPar *par = ictx->video_scale_ctx->tgt;
         f->format  = par->fmt;
         f->width = par->width;
         f->height = par->height;
@@ -580,11 +597,11 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
     //audio swr
     if(ret == 0 && type == AVMEDIA_TYPE_AUDIO){
 
-        ret = saved_resample(ictx->audioResampleCtx,ictx->isrc_frame,ictx->iadst_frame);
+        ret = saved_resample(ictx->audio_resample_ctx,ictx->isrc_frame,ictx->iadst_frame);
         if(ret>0) {
             f->nb_samples = ret;
             ret = SAVED_OP_OK;
-            SAVEDAudioPar *par = ictx->audioResampleCtx->tgt;
+            SAVEDAudioPar *par = ictx->audio_resample_ctx->tgt;
             f->channels = par->ch;
             f->format = par->fmt;
             f->sample_rate = par->sample;
@@ -599,4 +616,54 @@ int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMed
 
     return  ret;
 
+}
+
+int saved_decoder_get_audio_par(SAVEDDecoderContext *ictx, SAVEDAudioPar *par) {
+	RETIFNULL(ictx) SAVED_E_USE_NULL;
+	RETIFNULL(par) SAVED_E_USE_NULL;
+	RETIFNULL(ictx->audio_resample_ctx) SAVED_E_USE_NULL;
+
+	if (ictx->audio_resample_ctx->tgt == NULL) {
+		SAVLOGW("audio par not find");
+		return SAVED_E_NO_MEDIAFILE;
+	}
+	par->ch = ictx->audio_resample_ctx->tgt->ch;
+	par->fmt = ictx->audio_resample_ctx->tgt->fmt;
+	par->sample = ictx->audio_resample_ctx->tgt->sample;
+	return SAVED_OP_OK;
+}
+
+int saved_decoder_get_video_par(SAVEDDecoderContext *ictx, SAVEDVideoPar *par) {
+	RETIFNULL(ictx) SAVED_E_USE_NULL;
+	RETIFNULL(par) SAVED_E_USE_NULL;
+	RETIFNULL(ictx->video_scale_ctx) SAVED_E_USE_NULL;
+
+	if (ictx->video_scale_ctx->tgt == NULL) {
+		SAVLOGW("video par not find");
+		return SAVED_E_NO_MEDIAFILE;
+	}
+
+	par->fmt = ictx->video_scale_ctx->tgt->fmt;
+	par->width = ictx->video_scale_ctx->tgt->width;
+	par->height = ictx->video_scale_ctx->tgt->height;
+	return SAVED_OP_OK;
+}
+
+int saved_decoder_set_audio_par(SAVEDDecoderContext *ictx, SAVEDAudioPar *par) {
+	RETIFNULL(ictx) SAVED_E_USE_NULL;
+	RETIFNULL(par) SAVED_E_USE_NULL;
+	ictx->force_audio_par.fmt = par->fmt;
+	ictx->force_audio_par.ch = par->ch;
+	ictx->force_audio_par.ch_layout = av_get_default_channel_layout(par->ch);
+	ictx->force_audio_par.sample = par->sample;
+	return SAVED_OP_OK;
+}
+
+int saved_decoder_set_video_par(SAVEDDecoderContext *ictx, SAVEDVideoPar *par) {
+	RETIFNULL(ictx) SAVED_E_USE_NULL;
+	RETIFNULL(par) SAVED_E_USE_NULL;
+	ictx->force_video_par.fmt = par->fmt;
+	ictx->force_video_par.height = par->height;
+	ictx->force_video_par.width = par->width;
+	return SAVED_OP_OK;
 }

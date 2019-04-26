@@ -11,23 +11,25 @@ int main(int argc,char **argv) {
     {
         url = argv[1];
     } else{
-        url = "/home/fftest/b.mp3";
+        url = "d://abc.flv";
     }
 
 
-    SAVEDContext *ctx = saved_create_context();
-    SAVEDContext *enctx = saved_create_context();
+    SAVEDContext *ctx = saved_context_alloc();
+    SAVEDContext *enctx = saved_context_alloc();
    // saved_open_with_par(enctx,NULL,NULL,1,840,480,0,0,44100,2,-1,-1);
 
 
-    saved_open(ctx, url, NULL, 0);
+	saved_set_audio_par(ctx, 2, 4800, SAVED_AUDIO_FMT_FLT);
+	saved_set_video_par(ctx, 1920, 1080, SAVED_VIDEO_FMT_YUV420P);
+    saved_open(ctx, url, "d://abc.flv", 0);
     saved_open_with_par(enctx,"/home/fftest/avaava.mp4",NULL,1,240,320,0,0,44100,2,-1,-1);
     //saved_open_with_par(enctx,NULL,NULL,1,480,640,0,0,44100,2,-1,-1);
-    SAVEDPkt *pkt = saved_create_pkt();
-    SAVEDPkt *enpkt = saved_create_pkt();
-    SAVEDPkt *envpkt = saved_create_pkt();
-    SAVEDFrame *f = saved_create_frame();
-    SAVEDFrame *af = saved_create_frame();
+    SAVEDPkt *pkt = saved_pkt_alloc();
+    SAVEDPkt *enpkt = saved_pkt_alloc();
+    SAVEDPkt *envpkt = saved_pkt_alloc();
+    SAVEDFrame *f = saved_frame_alloc();
+    SAVEDFrame *af = saved_frame_alloc();
     f->type = SAVED_MEDIA_TYPE_VIDEO;
     af->type = SAVED_MEDIA_TYPE_AUDIO;
     enpkt->type = SAVED_MEDIA_TYPE_AUDIO;
@@ -104,11 +106,11 @@ int main(int argc,char **argv) {
 //    saved_send_pkt(ctx,pkt);
  //   saved_get_frame(ctx,f);
 
-    saved_del_pkt(pkt);
-    saved_del_pkt(enpkt);
-    saved_del_pkt(envpkt);
-    saved_del_frame(f);
-    saved_del_frame(af);
+    saved_pkt_free(pkt);
+    saved_pkt_free(enpkt);
+    saved_pkt_free(envpkt);
+    saved_frame_free(f);
+    saved_frame_free(af);
     saved_close(ctx);
     saved_close(enctx);
   //  ctx = saved_create_context();

@@ -15,17 +15,17 @@ SAVEDVideoScaleCtx* saved_video_scale_alloc(){
     }
     ctx->tgt = NULL;
     ctx->src = NULL;
-    ctx->src = malloc(sizeof(SAVEDPicPar));
-    memset(ctx->src,0,sizeof(SAVEDPicPar));
-    ctx->tgt = malloc(sizeof(SAVEDPicPar));
-    memset(ctx->tgt,0,sizeof(SAVEDPicPar));
+    ctx->src = malloc(sizeof(SAVEDVideoPar));
+    memset(ctx->src,0,sizeof(SAVEDVideoPar));
+    ctx->tgt = malloc(sizeof(SAVEDVideoPar));
+    memset(ctx->tgt,0,sizeof(SAVEDVideoPar));
     ctx->sws = NULL;
     ctx->usehw = 0;
     return  ctx;
 }
 
 
-int saved_video_scale_set_picpar(SAVEDPicPar *par,int format, int h, int w){
+int saved_video_scale_set_par(SAVEDVideoPar *par,int format, int h, int w){
     RETIFNULL(par) SAVED_E_USE_NULL;
 
     par->fmt = format;
@@ -69,7 +69,7 @@ int saved_video_scale(SAVEDVideoScaleCtx *ctx, AVFrame *src, AVFrame *dst){
             src->height != ctx->src->height)&&ctx->usehw == 0 ||
 		(src->width != ctx->src->width || src->height != ctx->src->height)&&ctx->usehw == 1){
         sws_freeContext(ctx->sws);
-      ret = saved_video_scale_set_picpar(ctx->src,src->format,src->height,src->width);
+      ret = saved_video_scale_set_par(ctx->src,src->format,src->height,src->width);
       if(ret != SAVED_OP_OK)
           return  ret;
       ret = saved_video_scale_open(ctx);

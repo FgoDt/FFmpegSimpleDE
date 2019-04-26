@@ -15,10 +15,10 @@
 #include<libavutil/avutil.h>
 
 
-SAVEDContext* saved_create_context() {
+SAVEDContext* saved_context_alloc() {
     saved_set_log_level(SAVEDLOG_LEVEL_D);
     SAVEDContext *ctx = (SAVEDContext*)malloc(sizeof(SAVEDContext));
-    ctx->ictx = NULL;
+    ctx->ictx = saved_internal_alloc();
     ctx->openmark = OPENMARK;
     ctx->audioPar = NULL;
     ctx->picPar = NULL;
@@ -27,16 +27,10 @@ SAVEDContext* saved_create_context() {
 }
 
 
-int saved_del_context() {
-return -1;
-}
-
-
 int saved_open(SAVEDContext *ctx, const char *path, const char *options, int isencoder) {
 
     RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
 
-    ctx->ictx = saved_internal_alloc();
 
 
     if (path == NULL && !isencoder)
@@ -57,24 +51,37 @@ int saved_open(SAVEDContext *ctx, const char *path, const char *options, int ise
 int saved_open_with_par(SAVEDContext *ctx, const char *path, const char *options, int isencoder, 
                                                     int vh, int vw, int vfmt, int vbitrate,
                                                     int asample_rate, int ach, int afmt, int abitrate){
-    ctx->ictx = saved_internal_alloc();
     SAVEDInternalContext *ictx = ctx->ictx;
     ictx->isencoder = isencoder;
-    int ret = saved_internal_opne_with_par(ctx->ictx,path,options,vh,vw,vbitrate,ach,asample_rate,abitrate);
+    int ret = saved_internal_open_with_par(ctx->ictx,path,options,vh,vw,vbitrate,ach,asample_rate,abitrate);
     return ret;
 }
 int saved_open_with_vcodec(SAVEDContext *ctx,SAVEDContext *vctx, const char *path, const char *options, int isencoder,
                            int vh, int vw, int vfmt, int vbitrate,
                            int asample_rate, int ach, int afmt, int abitrate){
-    ctx->ictx = saved_internal_alloc();
     SAVEDInternalContext *ictx = ctx->ictx;
     ictx->isencoder = isencoder;
-    int ret = saved_internal_opne_with_vcodec(ctx->ictx,vctx->ictx,path,options,vh,vw,vbitrate,ach,asample_rate,abitrate);
+    int ret = saved_internal_open_with_vcodec(ctx->ictx,vctx->ictx,path,options,vh,vw,vbitrate,ach,asample_rate,abitrate);
     return ret;
+	
+}
+
+int saved_open_encoder_width_codec(SAVEDContext *ctx, SAVEDContext *src_ctx, int codec_copy_flag, const char *options) {
+	RETIFNULL(ctx) SAVED_E_USE_NULL;
+	RETIFNULL(src_ctx) SAVED_E_USE_NULL;
+	if (codec_copy_flag<0)
+	{
+		SAVLOGE("code copy flag error");
+		return SAVED_E_FATAL;
+	}
+	ctx->ictx->isencoder = 1;
+	int ret = saved_internal_open_encoder_with_codec(ctx, src_ctx, codec_copy_flag, options);
+
+	return ret;
 
 }
 
-SAVEDPkt* saved_create_pkt() {
+SAVEDPkt* saved_pkt_alloc() {
     SAVEDPkt *pkt = (SAVEDPkt*)malloc(sizeof(SAVEDPkt));
     pkt->data = NULL;
     pkt->duration = -1;
@@ -99,7 +106,7 @@ int saved_pkt_unref(SAVEDPkt *pkt){
     return SAVED_OP_OK;
 }
 
-int saved_del_pkt(SAVEDPkt *pkt) {
+int saved_pkt_free(SAVEDPkt *pkt) {
     RETIFNULL(pkt) SAVED_E_USE_NULL;
 
     if (pkt->data)
@@ -116,7 +123,7 @@ int saved_del_pkt(SAVEDPkt *pkt) {
     return  SAVED_OP_OK;
 }
 
-SAVEDFrame* saved_create_frame() {
+SAVEDFrame* saved_frame_alloc() {
     SAVEDFrame *f = (SAVEDFrame*)malloc(sizeof(SAVEDFrame));
     f->data = NULL;
     f->duration = -1;
@@ -140,7 +147,7 @@ int saved_frame_unref(SAVEDFrame *savedFrame){
     return  SAVED_OP_OK;
 }
 
-int saved_del_frame(SAVEDFrame *savedFrame) {
+int saved_frame_free(SAVEDFrame *savedFrame) {
     RETIFNULL(savedFrame) SAVED_E_USE_NULL;
     if (savedFrame->data)
     {
@@ -264,12 +271,20 @@ int saved_set_audio_par(SAVEDContext *ctx,int ch, int sample_rate, int fmt){
     ctx->audioPar->ch = ch;
     ctx->audioPar->sample = sample_rate;
     ctx->audioPar->fmt = fmt;
+	int ret = saved_internal_set_audio_par(ctx->ictx, ctx->audioPar);
     return  SAVED_OP_OK;
 }
 
 int saved_set_video_par(SAVEDContext *ctx, int w, int h, int fmt){
     RETIFCTXNULL(ctx) SAVED_E_USE_NULL;
-    int ret = saved_internal_set_video_par(ctx->ictx,w,h,fmt);
+	if (ctx->picPar == NULL)
+	{
+		ctx->picPar = (SAVEDVideoPar*)malloc(sizeof(SAVEDVideoPar));
+	}
+	ctx->picPar->fmt = fmt;
+	ctx->picPar->width = w;
+	ctx->picPar->height = h;
+    int ret = saved_internal_set_video_par(ctx->ictx,ctx->picPar);
     return ret;
 
 }
@@ -302,10 +317,6 @@ int saved_get_duration(SAVEDContext *ctx, double *duration){
         }
     }
     return SAVED_OP_OK;
-}
-
-int saved_set_video_codec(SAVEDContext* ctx,SAVEDContext *vctx){
-    return SAVED_E_UNDEFINE;
 }
 
 #else

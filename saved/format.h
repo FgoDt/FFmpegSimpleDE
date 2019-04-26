@@ -34,7 +34,7 @@ typedef struct SAVEDFormat {
     int isencoder;
 }SAVEDFormat;
 
-SAVEDFormat *saved_format_alloc();
+SAVEDFormat *saved_format_alloc(void);
 
 int saved_format_free(SAVEDFormat *fmt);
 

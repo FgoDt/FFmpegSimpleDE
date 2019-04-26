@@ -32,6 +32,14 @@ int saved_decoder_send_pkt(SAVEDDecoderContext *ictx,SAVEDPkt *pkt);
 
 int saved_decoder_recive_frame(SAVEDDecoderContext *ictx, AVFrame *f, enum AVMediaType type) ;
 
+int saved_decoder_get_audio_par(SAVEDDecoderContext *ictx, SAVEDAudioPar *par);
+
+int saved_decoder_get_video_par(SAVEDDecoderContext *ictx, SAVEDVideoPar *par);
+
+int saved_decoder_set_audio_par(SAVEDDecoderContext *ictx, SAVEDAudioPar *par);
+
+int saved_decoder_set_video_par(SAVEDDecoderContext *ictx, SAVEDVideoPar *par);
+
 void saved_decoder_close(SAVEDDecoderContext *ictx);
 
 #endif // !__DECODER_H__

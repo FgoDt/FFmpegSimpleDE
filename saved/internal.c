@@ -4,6 +4,7 @@
 #include "decoder.h"
 #include "log.h"
 #include "saved.h"
+#include <libavutil/avutil.h>
 
 SAVEDInternalContext* saved_internal_alloc() {
     SAVEDInternalContext *ctx = (SAVEDInternalContext*)malloc(sizeof(SAVEDInternalContext));
@@ -12,9 +13,11 @@ SAVEDInternalContext* saved_internal_alloc() {
         SAVLOGE("no mem");
         return NULL;
     }
-    ctx->savctx = NULL;
-    ctx->fmt = NULL;
+	memset(ctx, 0, sizeof(SAVEDInternalContex));
+	ctx->savctx = saved_codec_alloc();
     ctx->isencoder = 0;
+    ctx->fmt = saved_format_alloc();
+
     return ctx;
 }
 
@@ -37,7 +40,6 @@ int saved_internal_close(SAVEDInternalContext *ictx){
 static int open_decoder(SAVEDInternalContext *ictx) {
 
 
-    ictx->savctx = saved_codec_alloc();
     if(ictx->savctx == NULL){
         SAVLOGE("saved codec alloc error");
 
@@ -57,12 +59,78 @@ void saved_copy_pkt_dsc(SAVEDPkt *pkt) {
     pkt->size = ipkt->size;
 }
 
+static int parse_options(AVDictionary **dict, const char *options) {
+	RETIFNULL(options) SAVED_E_USE_NULL;
+	RETIFNULL(dict) SAVED_E_USE_NULL;
+
+	char key[100] = { 0 };
+	char val[100] = { 0 };
+	int new_key_val = 0;
+	int is_key = 0;
+	int key_index = 0;
+	int val_index = 0;
+	int has_key_val = 0;
+	if (options[0]!='-')
+	{
+		return -1;
+	}
+	while (options[0]!='\0'&&options[0]!=NULL)
+	{
+		if (options[0] == '-')
+		{
+			new_key_val = 1;
+			is_key = 1;
+			key_index = 0;
+			val_index = 0;
+			options++;
+			continue;
+		}
+		if (options[0] == ' ') {
+			is_key = 0;
+			options++;
+			continue;
+		}
+		if (new_key_val) {
+			if (has_key_val) {
+				av_dict_set(dict, key, val, 0);
+				has_key_val = 0;
+			}
+			memset(key, 0, 100);
+			memset(val, 0, 100);
+			new_key_val = 0;
+		}
+		if (is_key ) {
+			if (key_index < 100) {
+				key[key_index] = options[0];
+				key_index++;
+				has_key_val = 1;
+			}
+		}
+		else
+		{
+			if (val_index < 100) {
+				val[val_index] = options[0];
+				val_index++;
+				has_key_val = 1;
+			}
+		}
+		options++;
+
+	}
+	//last loop key val not store
+	if (has_key_val) {
+		av_dict_set(dict, key, val, 0);
+	}
+	return 0;
+	
+}
+
 int saved_internal_open(SAVEDInternalContext *ictx,const char* path, void *options) {
     RETIFNULL(ictx) SAVED_E_USE_NULL;
 
-    ictx->fmt = saved_format_alloc();
 
     int ret = 0;
+	ret = parse_options(&ictx->options, options);
     if (ictx->isencoder&&path!=NULL)
     {
         return SAVED_E_UNDEFINE;
@@ -90,17 +158,15 @@ int saved_internal_open(SAVEDInternalContext *ictx,const char* path, void *optio
     return SAVED_E_UNDEFINE;
 }
 
-int saved_internal_opne_with_par(SAVEDInternalContext *ictx, const char *path, const char *options,
+int saved_internal_open_with_par(SAVEDInternalContext *ictx, const char *path, const char *options,
                                                                         int vh, int vw, int vbit_rate, 
                                                                         int ach, int asample_rate, int abit_rate){
     if(ictx->isencoder){
-        ictx->savctx = saved_codec_alloc();
         int ret = saved_codec_open_with_par(ictx->savctx,vh,vw,NULL,vbit_rate,asample_rate,NULL,ach,abit_rate);
 
         if(path != NULL){
-            ictx->fmt = saved_format_alloc();
             SAVEDCodecContext *enctx = (SAVEDCodecContext*)ictx->savctx;
-            ret =  saved_format_open_output(ictx->fmt,enctx->encoderctx,path,options);
+            ret =  saved_format_open_output(ictx->fmt,enctx->encoder_ctx,path,options);
         }
 
         return ret;
@@ -109,23 +175,30 @@ int saved_internal_opne_with_par(SAVEDInternalContext *ictx, const char *path, c
     return SAVED_E_UNDEFINE;
 }
 
-int saved_internal_opne_with_vcodec(SAVEDInternalContext *ictx,SAVEDInternalContext *ivctx, const char *path, const char *options,
+int saved_internal_open_with_vcodec(SAVEDInternalContext *ictx,SAVEDInternalContext *ivctx, const char *path, const char *options,
                                     int vh, int vw, int vbit_rate,
                                     int ach, int asample_rate, int abit_rate){
      if(ictx->isencoder){
-        ictx->savctx = saved_codec_alloc();
         int ret = saved_codec_open_with_par(ictx->savctx,vh,vw,NULL,vbit_rate,asample_rate,NULL,ach,abit_rate);
 
         if(path != NULL){
-            ictx->fmt = saved_format_alloc();
             SAVEDCodecContext *enctx = (SAVEDCodecContext*)ictx->savctx;
-            ret =  saved_format_open_output_with_vpar(ictx->fmt,enctx->encoderctx,ivctx->fmt->vstream,path,options);
+            ret =  saved_format_open_output_with_vpar(ictx->fmt,enctx->encoder_ctx,ivctx->fmt->vstream,path,options);
         }
 
         return ret;
     }
 
     return SAVED_E_UNDEFINE;
+}
+
+int saved_internal_open_encoder_with_codec(SAVEDInternalContex *ictx, SAVEDInternalContex *src_ctx, int copy_flags, const char *options) {
+	RETIFNULL(ictx) SAVED_E_USE_NULL;
+	RETIFNULL(src_ctx) SAVED_E_USE_NULL;
+
+	int ret = parse_options(ictx->options, options);
+
+	ret = saved_codec_open
 }
 
 int saved_internal_get_pkt(SAVEDInternalContext *ictx, SAVEDPkt *pkt) {
@@ -230,59 +303,34 @@ int saved_internal_get_metatdata(SAVEDInternalContext *ictx,char *key,char **val
 }
 
 
-int saved_internal_set_audio_par(SAVEDInternalContext *ictx,int ach, int sample, int fmt){
+int saved_internal_set_audio_par(SAVEDInternalContext *ictx,SAVEDAudioPar *par){
     RETIFNULL(ictx) SAVED_E_USE_NULL;
-    SAVEDCodecContext *codecContext = (SAVEDCodecContext*)ictx->savctx;
-    if(codecContext->forceAudioPar == NULL){
-        codecContext->forceAudioPar = (SAVEDAudioPar*)malloc(sizeof(SAVEDAudioPar));
-    }
-    codecContext->forceAudioPar->ch=ach;
-    codecContext->forceAudioPar->sample = sample;
-    codecContext->forceAudioPar->fmt = fmt;
-    return SAVED_OP_OK;
+	int ret = saved_codec_set_force_audio_par(ictx->savctx, par);
+    return ret;
 }
 
-int saved_internal_set_video_par(SAVEDInternalContext *ictx,int vw, int vh, int fmt){
+int saved_internal_set_video_par(SAVEDInternalContext *ictx,SAVEDVideoPar *par){
     RETIFNULL(ictx) SAVED_E_USE_NULL;
-    SAVEDCodecContext *codecContext = (SAVEDCodecContext*)ictx->savctx;
-    if(codecContext->forceVideoPar== NULL){
-        codecContext->forceVideoPar = (SAVEDPicPar*)malloc(sizeof(SAVEDPicPar));
-    }
-    codecContext->forceVideoPar->fmt = fmt;
-    codecContext->forceVideoPar->height = vh;
-    codecContext->forceVideoPar->width = vw;
-    return  SAVED_OP_OK;
+	int ret = saved_codec_set_force_video_par(ictx->savctx, par);
+    return  ret;
 }
 
-int saved_internal_get_audio_par(SAVEDInternalContext *ictx,int *ach, int* sample, int* fmt){
+int saved_internal_get_audio_par(SAVEDInternalContext *ictx,SAVEDAudioPar *par){
     RETIFNULL(ictx) SAVED_E_USE_NULL;
-    SAVEDCodecContext *codecContext = (SAVEDCodecContext*)ictx->savctx;
     if(ictx->isencoder){
         return SAVED_E_NO_MEDIAFILE;
     }
-
-    *ach = codecContext->decoderctx->audioResampleCtx->tgt->ch;
-    *fmt= codecContext->decoderctx->audioResampleCtx->tgt->fmt;
-    *sample = codecContext->decoderctx->audioResampleCtx->tgt->sample;
-    return  SAVED_OP_OK;
+	int ret = saved_codec_get_audio_par(ictx, par);
+    return  ret;
 }
 
-int saved_internal_get_video_par(SAVEDInternalContext *ictx,int* vw, int* vh, int* fmt){
+int saved_internal_get_video_par(SAVEDInternalContext *ictx, SAVEDVideoPar *par){
     RETIFNULL(ictx) SAVED_E_USE_NULL;
-    SAVEDCodecContext *codecContext = (SAVEDCodecContext*)ictx->savctx;
     if(ictx->isencoder){
         return SAVED_E_NO_MEDIAFILE;
     }
-    if(codecContext->decoderctx->vctx == NULL){
-        *vw = 0;
-        *vh = 0;
-        *fmt = -1;
-        return SAVED_OP_OK;
-    }
-    *vw = codecContext->decoderctx->videoScaleCtx->tgt->width;
-    *vh = codecContext->decoderctx->videoScaleCtx->tgt->height;
-    *fmt= codecContext->decoderctx->videoScaleCtx->tgt->fmt;
-    return  SAVED_OP_OK;
+	int ret = saved_codec_get_video_par(ictx->savctx, par);
+    return  ret;
 }
 
 int saved_internal_seek(SAVEDInternalContext *ictx,double pts){
@@ -291,13 +339,34 @@ int saved_internal_seek(SAVEDInternalContext *ictx,double pts){
     if(ictx->isencoder){
         return SAVED_E_AVLIB_ERROR;
     }
-    double rel = pts - ictx->savctx->decoderctx->decpts;
+    double rel = pts - ictx->savctx->decoder_ctx->decpts;
     rel *=1000000;
     int64_t seek_target = pts*1000*1000;
     int64_t seek_min    = rel > 0 ? seek_target - rel + 2: INT64_MIN;
     int64_t seek_max    = rel < 0 ? seek_target - rel - 2: INT64_MAX;
 
-
     int ret =avformat_seek_file(ictx->fmt->fmt,-1,seek_min,seek_target,seek_max,AVSEEK_FLAG_BACKWARD);
     return ret;
+}
+
+int saved_internal_set_option(SAVEDInternalContext *ictx,const char *key, const char *val) {
+	RETIFNULL(key) SAVED_E_USE_NULL;
+	RETIFNULL(val) SAVED_E_USE_NULL;
+	RETIFNULL(ictx) SAVED_E_USE_NULL;
+	int ret = av_dict_set(&ictx->options, key, val, 0);
+	return ret;
+}
+
+int saved_internal_get_option(SAVEDInternalContext *ictx,const char *key, char **val) {
+	RETIFNULL(key) SAVED_E_USE_NULL;
+	RETIFNULL(val) SAVED_E_USE_NULL;
+	RETIFNULL(ictx) SAVED_E_USE_NULL;
+	AVDictionaryEntry *entry;
+	entry = av_dict_get(ictx->options, key, NULL, 0);
+	if (entry != NULL) {
+		*val = malloc(strlen(entry->value) + 1);
+		(*val)[strlen(entry->value)] = 0;
+		memcpy(*val, entry->value, strlen(entry->value));
+	}
+	return 0;
 }

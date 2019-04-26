@@ -38,8 +38,11 @@ typedef struct SAVEDDecoderContext {
 
     int use_default_codec;
 
-    SAVEDVideoScaleCtx *videoScaleCtx;
-    SAVEDAudioResampleCtx *audioResampleCtx;
+	SAVEDVideoPar force_video_par;
+	SAVEDAudioPar force_audio_par;
+
+    SAVEDVideoScaleCtx *video_scale_ctx;
+    SAVEDAudioResampleCtx *audio_resample_ctx;
 
 }SAVEDDecoderContext;
 
@@ -65,6 +68,9 @@ typedef struct SAVEDEncoderContext {
     SAVEDVideoScaleCtx *videoScaleCtx;
     SAVEDAudioResampleCtx *audioResampleCtx;
 
+	SAVEDVideoPar *force_video_par;
+	SAVEDAudioPar *force_audio_par;
+
     AVAudioFifo *fifo;
     double aenpts;
     double venpts;
@@ -74,27 +80,32 @@ typedef struct SAVEDEncoderContext {
 
 
 typedef struct SAVEDCodecContext{
-
-    SAVEDDecoderContext *decoderctx;
-    SAVEDEncoderContext *encoderctx;
-    SAVEDAudioPar *forceAudioPar;
-    SAVEDPicPar *forceVideoPar;
+    SAVEDDecoderContext *decoder_ctx;
+    SAVEDEncoderContext *encoder_ctx;
     int isencoder;
 }SAVEDCodecContext;
 
-SAVEDCodecContext* saved_codec_alloc();
+SAVEDCodecContext* saved_codec_alloc(void);
 
 int saved_codec_open(SAVEDCodecContext *savctx, SAVEDFormat *fmt);
 
 int saved_codec_open_with_par(SAVEDCodecContext *savctx, int vh, int vw, int vfmt,int vbit_rate,
-                                                                                                                                int asample_rate, int afmt, int ach, int abit_rate );
+								int asample_rate, int afmt, int ach, int abit_rate );
+
+int saved_codec_open_with_option(SAVEDCodecContext *savctx, AVDictionary *options);
 
 int saved_codec_close(SAVEDCodecContext *savctx);
-
-
 int saved_codec_send_pkt(SAVEDCodecContext *ictx, SAVEDPkt *pkt);
 int saved_codec_get_pkt(SAVEDCodecContext *ictx, SAVEDPkt *pkt);
 int saved_codec_send_frame(SAVEDCodecContext *ictx, SAVEDFrame *f);
 int saved_codec_get_frame(SAVEDCodecContext *ictx, SAVEDFrame *f);
+
+int saved_codec_set_force_video_par(SAVEDCodecContext *ictx, SAVEDVideoPar *par);
+
+int saved_codec_set_force_audio_par(SAVEDCodecContext *ictx, SAVEDAudioPar *par);
+
+int saved_codec_get_video_par(SAVEDCodecContext *ictx, SAVEDVideoPar *par);
+
+int saved_codec_get_audio_par(SAVEDCodecContext *ictx, SAVEDAudioPar *par);
 
 #endif // !__CODEC_H__

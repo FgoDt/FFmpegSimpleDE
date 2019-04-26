@@ -10,9 +10,29 @@ SAVEDEncoderContext * saved_encoder_alloc(){
     return ctx;
 }
 
-int saved_encoder_open(SAVEDEncoderContext *ctx, const char *options){
+static int get_int_options(AVDictionary *op, const char *key,int *val) {
+	AVDictionaryEntry *entry = NULL;
+	entry = av_dict_get(op, "vh", NULL, 0);
+	if (entry != NULL) {
+		*val = atoi(entry->value);
+		return SAVED_OP_OK;
+	}
+	return SAVED_E_NO_MEDIAFILE;
+}
+
+int saved_encoder_open(SAVEDEncoderContext *ctx, AVDictionary *options){
     RETIFNULL(ctx) SAVED_E_USE_NULL;
+	int vh = 0, vw = 0, vfmt = 0;
+	int asample = 0, afmt = 0, ach = 0;
+	int ret = 0;
     if(options  != NULL){
+		get_int_options(options, "vw", &vw);
+		get_int_options(options, "vh", &vh);
+		get_int_options(options, "vmft", &vfmt);
+
+		get_int_options(options, "ar", &asample);
+		get_int_options(options, "afmt", &afmt);
+		get_int_options(options, "ach", &ach);
     }
 
     //default encoder aac h264
@@ -38,8 +58,8 @@ int saved_encoder_open(SAVEDEncoderContext *ctx, const char *options){
 }
 
 int saved_encoder_open_with_par(SAVEDEncoderContext *ctx, 
-                                                                        int vw, int vh , int vbit_rate, 
-                                                                        int asample_rate, int ach, int abit_rate){
+                                int vw, int vh , int vbit_rate, 
+                                int asample_rate, int ach, int abit_rate){
     RETIFNULL(ctx)  SAVED_E_USE_NULL;
     if(vw <=0 || vh <= 0){
         goto done_vencoder;
@@ -64,7 +84,7 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
         goto error_vencoder;
     }
 
-    int ret = saved_video_scale_set_picpar(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,vh,vw);
+    int ret = saved_video_scale_set_par(ctx->videoScaleCtx->tgt,AV_PIX_FMT_YUV420P,vh,vw);
     if(ret<0){
         goto error_vencoder;
     }
@@ -113,7 +133,7 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
         goto error_aencoder;
     }
 
-    ret = saved_resample_set_fmtpar(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_FLTP,ach,asample_rate);
+    ret = saved_resample_set_par(ctx->audioResampleCtx->tgt,AV_SAMPLE_FMT_FLTP,ach,asample_rate);
     if (ret <0 ){
         goto error_aencoder;
     }
@@ -136,16 +156,16 @@ int saved_encoder_open_with_par(SAVEDEncoderContext *ctx,
 
 
 static int check_video_scacle(SAVEDEncoderContext *ctx, SAVEDFrame *frame){
-    SAVEDPicPar *par = ctx->videoScaleCtx->src;
+    SAVEDVideoPar *par = ctx->videoScaleCtx->src;
     AVFrame *f = (AVFrame*)frame->internalframe;
     if(par->fmt != f->format ||
         par->height != f->height ||
         par->width != f->width
     ){
-        SAVEDVideoScaleCtx *vsctx = saved_video_scale_alloc();
-       int ret =  saved_video_scale_set_picpar(vsctx->tgt,ctx->videoScaleCtx->tgt->fmt,
+       SAVEDVideoScaleCtx *vsctx = saved_video_scale_alloc();
+       int ret =  saved_video_scale_set_par(vsctx->tgt,ctx->videoScaleCtx->tgt->fmt,
                                                 ctx->videoScaleCtx->tgt->height,ctx->videoScaleCtx->tgt->width);
-       ret |= saved_video_scale_set_picpar(vsctx->src,f->format,f->height,f->width);
+       ret |= saved_video_scale_set_par(vsctx->src,f->format,f->height,f->width);
        saved_video_scale_open(vsctx);
        if(ret<0){
            return SAVED_E_UNDEFINE;
@@ -164,9 +184,9 @@ static int check_audio_resampler(SAVEDEncoderContext *ctx, SAVEDFrame *frame){
         par->sample != f->sample_rate
     ){
         SAVEDAudioResampleCtx *arctx = saved_resample_alloc();
-       int ret =  saved_resample_set_fmtpar(arctx->src,f->format,f->channels,f->sample_rate);
+       int ret =  saved_resample_set_par(arctx->src,f->format,f->channels,f->sample_rate);
 
-       ret |= saved_resample_set_fmtpar(arctx->tgt,ctx->audioResampleCtx->tgt->fmt,
+       ret |= saved_resample_set_par(arctx->tgt,ctx->audioResampleCtx->tgt->fmt,
               ctx->audioResampleCtx->tgt->ch,ctx->audioResampleCtx->tgt->sample);
 
        ret |= saved_resample_open(arctx);
@@ -330,6 +350,17 @@ if(pkt->type == SAVED_MEDIA_TYPE_VIDEO){
 }
 
     return  SAVED_E_NO_MEDIAFILE;
+}
+
+int saved_encoder_set_video_par(SAVEDEncoderContext *ctx, SAVEDVideoPar *par) {
+	RETIFNULL(ctx) SAVED_E_USE_NULL;
+	RETIFNULL(par) SAVED_E_USE_NULL;
+}
+
+int saved_encoder_set_audio_par(SAVEDEncoderContext *ctx, SAVEDAudioPar *par) {
+	RETIFNULL(ctx) SAVED_E_USE_NULL;
+	RETIFNULL(par) SAVED_E_USE_NULL;
+
 }
 
 void  saved_encoder_close(SAVEDEncoderContext *ctx){

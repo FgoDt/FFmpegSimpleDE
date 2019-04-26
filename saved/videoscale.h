@@ -12,21 +12,21 @@ typedef struct SAVEDPicPar{
     int width;
     int height;
     enum AVPixelFormat fmt;
-}SAVEDPicPar;
+}SAVEDVideoPar;
 
 typedef struct SAVEDVideoScaleCtx{
-    SAVEDPicPar *tgt;
-    SAVEDPicPar *src;
+    SAVEDVideoPar *tgt;
+    SAVEDVideoPar *src;
     struct SwsContext *sws;
     int usehw;
 }SAVEDVideoScaleCtx;
 
-SAVEDVideoScaleCtx* saved_video_scale_alloc();
+SAVEDVideoScaleCtx* saved_video_scale_alloc(void);
 
 
 void saved_video_scale_close(SAVEDVideoScaleCtx *ctx);
 
-int saved_video_scale_set_picpar(SAVEDPicPar *par,int format, int h, int w);
+int saved_video_scale_set_par(SAVEDVideoPar *par,int format, int h, int w);
 
 int saved_video_scale_open(SAVEDVideoScaleCtx *ctx);
 

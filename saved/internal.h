@@ -17,6 +17,7 @@ typedef  struct SAVECodecContext SAVECodecContext;
 typedef struct SAVEDInternalContext{
     SAVEDFormat *fmt;
     SAVEDCodecContext *savctx;
+	AVDictionary *options;
     int isencoder;
 }SAVEDInternalContext;
 
@@ -34,12 +35,14 @@ SAVEDInternalContext* saved_internal_alloc();
  **/
 int saved_internal_open(SAVEDInternalContext *ictx, const char* path, void *options);
 
-int saved_internal_opne_with_par(SAVEDInternalContext *ictx, const char *path, const char *options,
+int saved_internal_open_with_par(SAVEDInternalContext *ictx, const char *path, const char *options,
                                                                         int vh, int vw, int vbit_rate, 
                                                                         int ach, int asample_rate, int abit_rate);
-int saved_internal_opne_with_vcodec(SAVEDInternalContext *ictx,SAVEDInternalContext *ivctx, const char *path, const char *options,
+int saved_internal_open_with_vcodec(SAVEDInternalContext *ictx,SAVEDInternalContext *ivctx, const char *path, const char *options,
                                  int vh, int vw, int vbit_rate,
                                  int ach, int asample_rate, int abit_rate);
+
+int saved_internal_open_encoder_with_codec(SAVEDInternalContex *ictx, SAVEDInternalContex *src_ctx, int copy_flags, const char *options);
 
 int saved_internal_close(SAVEDInternalContext *ictx);
 
@@ -53,14 +56,18 @@ int saved_internal_send_frame(SAVEDInternalContext *ictx, SAVEDFrame *f);
 
 int saved_internal_get_metatdata(SAVEDInternalContext *ictx,char *key,char **val);
 
-int saved_internal_set_audio_par(SAVEDInternalContext *ictx,int ach, int sample, int fmt);
+int saved_internal_set_audio_par(SAVEDInternalContext *ictx, SAVEDAudioPar *par);
 
-int saved_internal_set_video_par(SAVEDInternalContext *ictx,int vw, int vh, int fmt);
+int saved_internal_set_video_par(SAVEDInternalContext *ictx, SAVEDVideoPar *par);
 
-int saved_internal_get_audio_par(SAVEDInternalContext *ictx,int *ach, int* sample, int* fmt);
+int saved_internal_get_audio_par(SAVEDInternalContext *ictx,SAVEDAudioPar *par);
 
-int saved_internal_get_video_par(SAVEDInternalContext *ictx,int* vw, int* vh, int* fmt);
+int saved_internal_get_video_par(SAVEDInternalContext *ictx,SAVEDVideoPar *par);
 
 int saved_internal_seek(SAVEDInternalContext *ictx,double pts);
+
+int saved_internal_set_option(const char *key, const char *val);
+
+int saved_internal_get_option(const char *key,char **val);
 
 #endif
